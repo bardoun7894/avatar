@@ -1,0 +1,12 @@
+livekit-agents
+livekit-plugins-openai
+livekit-plugins-noise-cancellation
+livekit-plugins-silero
+livekit-agents[tavus]~=1.0
+livekit-plugins-elevenlabs
+# Optional: Uncomment to enable Hedra (cheaper video avatar alternative)
+# livekit-plugins-hedra
+requests
+python-dotenv
+pydantic-ai-slim[openai,cmp]
+pyaudio
