@@ -139,7 +139,8 @@ Focus on:
                     analysis = await self.analyze_image(frame_bytes)
 
                     if analysis and callback:
-                        await callback(analysis)
+                        # Pass both analysis and frame_bytes for face recognition
+                        await callback(analysis, frame_bytes)
 
                 # Wait before next capture
                 await asyncio.sleep(self.analysis_interval)

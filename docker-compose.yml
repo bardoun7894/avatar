@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # Avatar Backend (Python + LiveKit Agents)
+  backend:
+    build:
+      context: ./avatary
+      dockerfile: Dockerfile
+    container_name: avatar-backend
+    restart: unless-stopped
+    env_file:
+      - ./avatary/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    volumes:
+      # Mount code for development (comment out for production)
+      - ./avatary:/app
+      # Persist logs
+      - ./avatary/logs:/app/logs
+      # Don't overwrite venv in container
+      - /app/venv
+    ports:
+      - "8080:8080"
+    networks:
+      - avatar-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Avatar Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: avatar-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_LIVEKIT_URL=${LIVEKIT_URL}
+    volumes:
+      # Mount for development (comment out for production)
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    networks:
+      - avatar-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {if (r.statusCode == 200) process.exit(0); process.exit(1);})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis (for caching knowledge base results)
+  redis:
+    image: redis:7-alpine
+    container_name: avatar-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - avatar-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  avatar-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

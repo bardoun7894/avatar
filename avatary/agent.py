@@ -26,12 +26,25 @@ from users_manager import UsersManager
 from professional_conversation_manager import ProfessionalConversationManager
 from vision_processor import VisionProcessor
 
+# Import new visual context system
+from visual_context_models import VisualContextStore
+from visual_aware_agent import VisualAwareAgent
+
+# Import face recognition system (InsightFace)
+try:
+    from insightface_recognition import face_recognizer
+    FACE_RECOGNITION_ENABLED = True
+    print("✅ Face recognition enabled (InsightFace)")
+except ImportError:
+    FACE_RECOGNITION_ENABLED = False
+    print("⚠️  Face recognition disabled (install: pip install insightface onnxruntime)")
+
 load_dotenv()
 
 # Initialize managers
-conversation_logger = ConversationLogger()  # Keep for backward compatibility
+conversation_logger = ConversationLogger()  # For message-by-message logging
 users_manager = UsersManager()
-prof_manager = ProfessionalConversationManager()  # Professional system
+prof_manager = ProfessionalConversationManager()  # For buffered conversation logging
 
 # Helper function to extract user info from text
 def extract_user_info(text: str):
@@ -121,9 +134,9 @@ async def entrypoint(ctx: agents.JobContext):
     # Track extracted user info globally
     extracted_user_info = {"name": None, "phone": None, "email": None}
 
-    # Helper to save message (legacy - kept for compatibility)
+    # Helper to save message (important for immediate logging)
     def save_message(role: str, content: str):
-        """Save message to database"""
+        """Save message to database immediately (not buffered)"""
         if not content or not content.strip():
             return
 
@@ -150,6 +163,8 @@ async def entrypoint(ctx: agents.JobContext):
                             phone=user_info["phone"]
                         )
                         print("تم حفظ المستخدم - User saved!")
+                        extracted_user_info["name"] = user_info["name"]
+                        extracted_user_info["phone"] = user_info["phone"]
                     except Exception as e:
                         print(f"خطأ في حفظ المستخدم: {e}")
 
@@ -200,12 +215,20 @@ async def entrypoint(ctx: agents.JobContext):
 
     session = AgentSession(**session_config)
 
-    # Store visual context globally for injection
-    vision_context = {"latest": None, "timestamp": None}
+    # Create visual context store using Pydantic
+    visual_store = VisualContextStore(
+        enabled=True,
+        max_age_seconds=15.0  # Context expires after 15 seconds
+    )
+    print("✅ Visual context store created (Pydantic-based)")
 
-    # Create agent
-    agent = Agent(instructions=AGENT_INSTRUCTIONS)
-    print("تم إنشاء الوكيل - Agent created")
+    # Create Visual-Aware Agent (injects context before each LLM call)
+    agent = VisualAwareAgent(
+        instructions=AGENT_INSTRUCTIONS,
+        visual_store=visual_store
+    )
+    print("تم إنشاء الوكيل - Visual-Aware Agent created")
+    print("   Uses llm_node override for automatic context injection")
 
     # Register tools with the agent
     print("\nتسجيل الأدوات مع الوكيل - Registering tools...")
@@ -314,29 +337,24 @@ async def entrypoint(ctx: agents.JobContext):
         # OFFICIAL LIVEKIT WAY: Listen to conversation_item_added event
         @session.on("conversation_item_added")
         def on_conversation_item_added(event: ConversationItemAddedEvent):
-            """Buffer messages locally (fast, no database lag!)"""
+            """Log messages using both immediate and buffered logging"""
             try:
                 role = event.item.role  # "user" or "assistant"
                 content = event.item.text_content
 
                 if content and content.strip():
-                    # Buffer locally (FAST - no database call!)
+                    # 1. Immediate logging to database (conversation_logger)
+                    save_message(role=role, content=content)
+
+                    # 2. Buffer locally for batch save at end (prof_manager)
                     prof_manager.add_message_to_local_transcript(
                         role=role,
                         content=content,
                         metadata={"language": "ar"}
                     )
 
-                    # Extract user info if user message
-                    if role == "user":
-                        user_info = extract_user_info(content)
-                        if user_info["name"]:
-                            extracted_user_info["name"] = user_info["name"]
-                        if user_info["phone"]:
-                            extracted_user_info["phone"] = user_info["phone"]
-
             except Exception as e:
-                print(f"⚠️  Error buffering message: {e}")
+                print(f"⚠️  Error logging message: {e}")
                 import traceback
                 traceback.print_exc()
 
@@ -399,29 +417,49 @@ async def entrypoint(ctx: agents.JobContext):
         print("قل: السلام عليكم - Say: Assalamu Alaikum")
         print("="*60 + "\n")
 
+        # Send initial greeting
+        print("🎤 Sending initial greeting...")
+        await session.say(
+            "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟",
+            allow_interruptions=True
+        )
+        print("✅ Initial greeting sent!")
+
         # Initialize vision processor
         vision_processor = VisionProcessor()
         vision_task = None
 
-        async def handle_visual_update(analysis: str):
-            """Handle visual analysis updates - inject into agent instructions"""
-            import time
-            print(f"👁️  Visual analysis: {analysis[:100]}...")
+        async def handle_visual_update(analysis: str, frame_bytes: bytes = None):
+            """
+            Handle visual analysis updates with face recognition
+            Uses new llm_node injection pattern (LiveKit Agents 1.0)
+            """
+            print(f"👁️  Visual analysis received: {analysis[:100]}...")
 
-            # Store context with timestamp
-            vision_context["latest"] = analysis
-            vision_context["timestamp"] = time.time()
+            # Try face recognition if enabled and frame provided
+            recognized_person = None
+            if FACE_RECOGNITION_ENABLED and frame_bytes:
+                try:
+                    match = face_recognizer.recognize_person(frame_bytes)
+                    if match.matched:
+                        recognized_person = match.user_name
+                        print(f"👤 RECOGNIZED: {match.user_name} (confidence: {match.confidence:.0%})")
+                        # Add recognition to analysis
+                        recognition_text = f"\n\n🎯 التعرف على الشخص / Person Identified:\n{match.user_name} ({match.phone})"
+                        analysis = analysis + recognition_text
+                except Exception as e:
+                    print(f"⚠️  Face recognition error: {e}")
 
-            # Update agent instructions dynamically with visual context
-            updated_instructions = (
-                AGENT_INSTRUCTIONS +
-                f"\n\n🎥 ما أراه الآن عبر الكاميرا (تحديث {time.strftime('%H:%M:%S')}):\n{analysis}"
-            )
+            # Update visual context in Pydantic store
+            # This will be automatically injected before next LLM call
+            agent.update_visual_context(analysis)
 
-            # Use Pydantic-based Agent.update_instructions() method
-            agent.update_instructions(updated_instructions)
-
-            print(f"✅ Agent instructions updated with visual context via Pydantic model")
+            # Get and log status
+            status = agent.get_visual_status()
+            print(f"✅ Visual context stored (will inject before next LLM call)")
+            print(f"   Fresh: {status.get('is_fresh', False)}, Age: {status.get('age_seconds', 0):.1f}s")
+            if recognized_person:
+                print(f"   👤 Person: {recognized_person}")
 
         # Monitor for video tracks
         async def monitor_video_tracks():

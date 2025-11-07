@@ -1,0 +1,462 @@
+# Avatar App - Cursor IDE Development Rules
+
+## 🎯 Project Overview
+
+**Purpose:** Arabic AI Avatar with Real-time Conversation, Visual Context Awareness, and Data Persistence
+**Backend:** Python + LiveKit Agents (avatary/)
+**Frontend:** Next.js + React + LiveKit Components (frontend/)
+**Database:** Supabase (PostgreSQL)
+**Main Use Case:** Ornina company customer service bot with vision capabilities
+
+---
+
+## 📁 Project Structure
+
+```
+/var/www/avatar /
+├── avatary/                           # Python backend
+│   ├── agent.py                       # ⭐ MAIN - Agent orchestrator
+│   ├── visual_aware_agent.py          # ⭐ Custom agent with visual context injection
+│   ├── visual_context_models.py       # ⭐ Pydantic models for visual data
+│   ├── vision_processor.py            # Video frame capture & GPT-4 Vision
+│   ├── vision_agent.py                # Video track monitoring
+│   ├── prompts.py                     # Arabic agent instructions
+│   ├── professional_conversation_manager.py  # Conversation buffering + DB
+│   ├── knowledge_base_manager.py      # Supabase queries
+│   ├── local_mcp_server.py            # MCP tool definitions
+│   ├── users_manager.py               # User data management
+│   ├── consultation_manager.py        # Consultation booking
+│   ├── inquiry_manager.py             # Customer inquiries
+│   ├── training_manager.py            # Training enrollments
+│   └── requirements.txt               # Python dependencies
+└── frontend/                          # Next.js frontend
+    ├── pages/
+    │   ├── index.tsx                  # Main page
+    │   └── api/
+    │       ├── token.ts               # LiveKit token
+    │       └── dispatch-agent.ts      # Agent dispatch
+    └── components/
+        ├── VideoCallInterface.tsx
+        └── ControlBar.tsx
+```
+
+---
+
+## 🏗️ Architecture Patterns (MUST FOLLOW)
+
+### 1. Visual Context Pattern ⭐ CRITICAL
+**Current Implementation (Working):**
+- Uses `VisualAwareAgent` class that extends LiveKit Agent
+- Overrides `llm_node` method to inject visual context
+- Visual context stored in Pydantic `VisualContextStore`
+- Context injected as system message before EACH LLM call
+
+**How It Works:**
+```python
+class VisualAwareAgent(Agent):
+    async def llm_node(self, chat_ctx, tools, model_settings):
+        # Get fresh visual analysis from Pydantic store
+        current_visual = self.visual_store.get_current()
+
+        if current_visual and current_visual.is_fresh:
+            # Inject as system message
+            chat_ctx.add_message(
+                role="system",
+                content=current_visual.to_injection_text()
+            )
+
+        # Delegate to default processing
+        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+            yield chunk
+```
+
+**DO:**
+- ✅ Use VisualAwareAgent for all agent instances
+- ✅ Update visual context via `agent.update_visual_context(analysis)`
+- ✅ Let the llm_node override handle automatic injection
+- ✅ Check freshness via `visual_store.get_current().is_fresh`
+
+**DON'T:**
+- ❌ Update agent.instructions directly (won't work with Tavus caching)
+- ❌ Use session.say() to inject context (pollutes conversation)
+- ❌ Prepend context to user messages (hard to maintain)
+
+### 2. Conversation Management Pattern
+**Current:** `ProfessionalConversationManager`
+```python
+# Local buffering (zero-lag) + Database persistence
+prof_manager = ProfessionalConversationManager()
+prof_manager.add_message(role="user", content="...")
+# ... at call end:
+prof_manager.save_to_database(room_name, user_id)
+```
+
+**DO:**
+- ✅ Use ProfessionalConversationManager only
+- ✅ Buffer messages locally during call
+- ✅ Save to database on call end
+- ✅ Implement buffer size limits (max 100 messages)
+
+**DON'T:**
+- ❌ Use conversation_logger.py (deprecated)
+- ❌ Use conversation_context_manager.py (deprecated, use VisualAwareAgent)
+- ❌ Write to database on every message (too slow)
+
+### 3. Knowledge Base Pattern
+```python
+# Async search with caching (when implemented)
+results = await kb_manager.smart_search(query)
+```
+
+**DO:**
+- ✅ Use async/await for all DB operations
+- ✅ Implement caching layer (Redis, TTL: 5 min)
+- ✅ Use connection pooling (singleton pattern)
+
+**DON'T:**
+- ❌ Synchronous DB calls in async context
+- ❌ Create new Supabase client per query
+- ❌ Skip caching for frequently accessed data
+
+### 4. Tool Registration Pattern
+```python
+# In agent.py
+from local_mcp_server import create_mcp_tools
+
+tools = create_mcp_tools()
+for tool in tools:
+    agent_session.register_tool(tool)
+```
+
+---
+
+## 📋 Implementation Checklist (Reference Plan)
+
+### ✅ COMPLETED (Don't Redo)
+- [x] Visual context injection system (VisualAwareAgent)
+- [x] Pydantic models for visual data
+- [x] Professional conversation manager
+- [x] Knowledge base integration (Supabase)
+- [x] User data extraction and management
+- [x] Arabic voice support (OpenAI TTS "alloy")
+- [x] MCP tools for knowledge base search
+- [x] Frame capture and GPT-4 Vision analysis
+- [x] Fix ModelSettings import bug ⚠️ CRITICAL FIX APPLIED
+
+### 🚧 IN PROGRESS (Current Sprint)
+- [ ] Docker setup (Dockerfile + docker-compose.yml)
+- [ ] Redis caching layer
+- [ ] Async database operations
+- [ ] Connection pooling
+- [ ] Performance optimizations
+
+### 📝 TODO (Future Work)
+- [ ] Comprehensive test suite
+- [ ] Structured logging (JSON format)
+- [ ] Health check endpoint
+- [ ] Rate limiting for APIs
+- [ ] Monitoring and metrics
+- [ ] Production deployment guide
+
+---
+
+## 💻 Code Standards
+
+### Python Style
+```python
+# ✅ GOOD: Type hints, async, Pydantic
+async def search_products(query: str) -> List[Product]:
+    """Search products in knowledge base."""
+    results = await kb_manager.search(query)
+    return [Product(**r) for r in results]
+
+# ❌ BAD: No types, sync in async context
+def search_products(query):
+    results = kb_manager.search(query)  # Blocking!
+    return results
+```
+
+### Naming Conventions
+- **Files:** `snake_case.py`
+- **Classes:** `PascalCase`
+- **Functions:** `snake_case`
+- **Constants:** `UPPER_SNAKE_CASE`
+- **Private:** `_leading_underscore`
+
+### Documentation
+```python
+def create_agent(instructions: str) -> VisualAwareAgent:
+    """
+    Create a visual-aware agent instance.
+
+    Args:
+        instructions: Base Arabic instructions for the agent
+
+    Returns:
+        VisualAwareAgent instance with visual context injection
+
+    Example:
+        >>> agent = create_agent("أنت مساعد Ornina")
+        >>> agent.update_visual_context("أرى شخصًا...")
+    """
+    visual_store = VisualContextStore()
+    return VisualAwareAgent(instructions, visual_store)
+```
+
+---
+
+## 🚨 Critical Rules
+
+### 1. Import Pattern (FIXED - Nov 7, 2025)
+```python
+# ✅ CORRECT (after fix)
+from livekit.agents import Agent, llm
+from typing import AsyncIterable, Any
+
+async def llm_node(self, chat_ctx, tools, model_settings: Any):
+    # ...
+
+# ❌ WRONG (old - caused crash)
+from livekit.agents import Agent, llm, ModelSettings  # ModelSettings doesn't exist!
+```
+
+### 2. Dependencies (Updated)
+All dependencies MUST be in `requirements.txt`:
+```txt
+✅ livekit-agents
+✅ supabase>=2.0.0          # Added Nov 7
+✅ Pillow>=10.0.0           # Added Nov 7
+✅ numpy>=1.24.0            # Added Nov 7
+✅ pydantic-ai-slim[openai,cmp]
+✅ requests
+✅ python-dotenv
+```
+
+### 3. Async/Await Rules
+```python
+# ✅ CORRECT: Async I/O
+async def fetch_data():
+    result = await db.query()
+    return result
+
+# ❌ WRONG: Blocking in async
+async def fetch_data():
+    result = db.query()  # Blocks event loop!
+    return result
+```
+
+### 4. Error Handling
+```python
+# ✅ GOOD: Specific exceptions, logging
+try:
+    result = await api_call()
+except OpenAIError as e:
+    logger.error(f"OpenAI API failed: {e}")
+    # Graceful fallback
+    return default_response
+except Exception as e:
+    logger.exception("Unexpected error")
+    raise
+
+# ❌ BAD: Bare except
+try:
+    result = api_call()
+except:  # Too broad!
+    pass  # Silent failure!
+```
+
+### 5. Memory Management
+```python
+# ✅ GOOD: Limited buffer, cleanup
+class ConversationManager:
+    MAX_MESSAGES = 100
+
+    def add_message(self, msg):
+        self.messages.append(msg)
+        if len(self.messages) > self.MAX_MESSAGES:
+            self.messages = self.messages[-self.MAX_MESSAGES:]
+
+# ❌ BAD: Unbounded growth
+class ConversationManager:
+    def add_message(self, msg):
+        self.messages.append(msg)  # Grows forever!
+```
+
+---
+
+## 🎨 Frontend Standards
+
+### Next.js/React Patterns
+```typescript
+// ✅ GOOD: TypeScript, proper hooks
+import { useState, useEffect } from 'react';
+import { Room } from 'livekit-client';
+
+export const VideoCall: React.FC = () => {
+  const [room, setRoom] = useState<Room | null>(null);
+
+  useEffect(() => {
+    return () => room?.disconnect();
+  }, [room]);
+
+  // ...
+}
+
+// ❌ BAD: No types, missing cleanup
+export const VideoCall = () => {
+  const [room, setRoom] = useState(null);
+  // No cleanup - memory leak!
+}
+```
+
+---
+
+## 🧪 Testing Requirements
+
+### Unit Tests
+```python
+# tests/test_visual_context.py
+import pytest
+from visual_context_models import VisualContextStore
+
+@pytest.mark.asyncio
+async def test_visual_context_freshness():
+    store = VisualContextStore()
+    store.update("Test analysis")
+
+    current = store.get_current()
+    assert current is not None
+    assert current.is_fresh is True
+```
+
+### Before Committing
+```bash
+# Run these checks:
+1. pytest avatary/tests/           # All tests pass
+2. mypy avatary/                   # Type checking
+3. python agent.py dev             # Agent starts without errors
+4. Check agent.log for errors      # No runtime errors
+```
+
+---
+
+## 🐳 Docker Workflow
+
+### Development
+```bash
+docker-compose up --build
+# Backend: http://localhost:8080
+# Frontend: http://localhost:3000
+```
+
+### Production
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+---
+
+## 📊 Performance Targets
+
+- **Agent Response Time:** < 2 seconds
+- **Knowledge Base Search:** < 200ms (with cache)
+- **Vision Analysis:** Every 3 seconds
+- **Memory Usage:** < 500MB per agent instance
+- **Conversation Buffer:** Max 100 messages
+
+---
+
+## 🔍 Debugging
+
+### Vision System Issues
+```bash
+# Check vision logs
+tail -f avatary/agent.log | grep -E "👁️|✅|💉"
+
+# Expected output:
+# 👁️  Visual analysis received: أرى شخصًا...
+# ✅ Visual context stored
+# 💉 Injecting visual context (2.3s old)
+```
+
+### Agent Won't Start
+```bash
+# 1. Check Python syntax
+cd avatary && python -m py_compile agent.py
+
+# 2. Check imports
+python -c "from visual_aware_agent import VisualAwareAgent"
+
+# 3. Check .env
+cat .env | grep -E "LIVEKIT|OPENAI|SUPABASE"
+```
+
+### Database Issues
+```bash
+# Test Supabase connection
+python -c "
+from knowledge_base_manager import KnowledgeBaseManager
+kb = KnowledgeBaseManager()
+print('✅ Connected' if kb.client else '❌ Failed')
+"
+```
+
+---
+
+## 🚫 DEPRECATED - DO NOT USE
+
+| File/Pattern | Status | Use Instead |
+|-------------|--------|-------------|
+| `conversation_logger.py` | ❌ Deprecated | `ProfessionalConversationManager` |
+| `conversation_context_manager.py` | ❌ Deprecated | `VisualAwareAgent` |
+| Updating `agent.instructions` | ❌ Won't work | `llm_node` injection pattern |
+| `session.say()` for context | ❌ Pollutes flow | `chat_ctx.add_message()` in llm_node |
+| Synchronous Supabase calls | ❌ Slow | Async + connection pooling |
+
+---
+
+## 📚 Key Documentation
+
+- **Vision System:** `avatary/DEBUG_VISION.md`
+- **Implementation Details:** `avatary/IMPLEMENTATION_SUMMARY.md`
+- **Solution Architecture:** `avatary/VISUAL_CONTEXT_SOLUTION.md`
+- **LiveKit Agents Docs:** https://docs.livekit.io/agents/
+- **Supabase Docs:** https://supabase.com/docs
+
+---
+
+## 🎯 Quick Start (New Developers)
+
+1. **Read the architecture** in DEBUG_VISION.md
+2. **Understand the flow:**
+   - User connects → Camera permission → Video track
+   - Vision processor captures frames (every 3s)
+   - GPT-4 Vision analyzes → Returns Arabic description
+   - VisualAwareAgent stores in VisualContextStore (Pydantic)
+   - User speaks → llm_node triggered
+   - Visual context injected as system message
+   - LLM generates response with visual awareness
+3. **Test the system:**
+   - Hold up an object
+   - Ask: "ماذا ترى؟" (What do you see?)
+   - Avatar should describe it!
+
+---
+
+## ✅ When Stuck - Checklist
+
+- [ ] Read DEBUG_VISION.md for visual context issues
+- [ ] Check agent.log for runtime errors
+- [ ] Verify all .env variables are set
+- [ ] Ensure using VisualAwareAgent (not old patterns)
+- [ ] Check LiveKit Agents documentation
+- [ ] Test import: `python -c "from visual_aware_agent import VisualAwareAgent"`
+- [ ] Verify dependencies: `pip install -r requirements.txt`
+- [ ] Check git status for uncommitted changes
+- [ ] Run tests: `pytest avatary/tests/`
+
+---
+
+**Last Updated:** November 7, 2025
+**Critical Fix Applied:** ModelSettings import bug resolved
+**Status:** Production-ready backend, Docker setup in progress

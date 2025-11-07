@@ -10,3 +10,15 @@ requests
 python-dotenv
 pydantic-ai-slim[openai,cmp]
 pyaudio
+# Database and image processing
+supabase>=2.0.0
+Pillow>=10.0.0
+numpy>=1.24.0
+email-validator>=2.0.0
+# Face recognition with InsightFace
+insightface>=0.7.3
+onnxruntime>=1.23.0
+# Workflow visualization
+langgraph>=0.2.0
+langchain>=0.3.0
+graphviz>=0.20.0

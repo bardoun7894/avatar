@@ -63,23 +63,36 @@
    - Sets up LiveKit Agent Session
    - Registers tools
    - Manages conversation lifecycle
+   - Creates VisualAwareAgent instance
 
-2. **vision_agent.py** - Vision processing
+2. **visual_aware_agent.py** ⭐ NEW - Custom Agent with context injection
+   - Extends LiveKit Agent class
+   - Overrides `llm_node` method (LiveKit Agents 1.0 pattern)
+   - Injects visual context as system message before each LLM call
+   - Uses Pydantic models for clean data management
+
+3. **visual_context_models.py** ⭐ NEW - Pydantic models
+   - `VisualAnalysis` - Single analysis with timestamp
+   - `VisualContextStore` - Thread-safe context storage
+   - Automatic freshness checking
+   - Clean data validation
+
+4. **vision_agent.py** - Vision processing
    - Monitors video tracks
    - Captures frames
    - Analyzes with GPT-4 Vision
 
-3. **vision_processor.py** - Low-level frame capture
+5. **vision_processor.py** - Low-level frame capture
    - Converts LiveKit video frames
    - Manages memory efficiently
    - Handles JPEG encoding
 
-4. **conversation_context_manager.py** - Context injection
-   - Updates agent instructions dynamically
-   - Manages visual context freshness
-   - Uses Pydantic Agent.update_instructions()
+6. **conversation_context_manager.py** - DEPRECATED
+   - Old approach (updating instructions)
+   - Kept for backward compatibility
+   - Delegates to VisualAwareAgent methods
 
-5. **tavus_integration.py** - Tavus avatar API
+7. **tavus_integration.py** - Tavus avatar API
    - Creates/manages Tavus conversations
    - Handles avatar lifecycle
 
@@ -122,7 +135,7 @@ python3 diagnostic_tool.py
 
 ## Common Issues
 
-### Issue 1: Vision works but avatar doesn't acknowledge
+### Issue 1: Vision works but avatar doesn't acknowledge ✅ SOLVED
 
 **Symptoms:**
 - ✅ Vision analysis shows correct descriptions
@@ -132,8 +145,19 @@ python3 diagnostic_tool.py
 **Root Cause:**
 Tavus Avatar may have its own instruction caching or the LiveKit Agent's updated instructions aren't being used for every turn.
 
-**Solution:**
-Instead of updating instructions, we need to inject visual context as a "system thought" or user message at the start of each conversation turn.
+**Solution (IMPLEMENTED):**
+✅ Created `VisualAwareAgent` class that overrides `llm_node` method
+✅ Injects visual context as system message into ChatContext before EACH LLM call
+✅ Uses LiveKit Agents 1.0 pattern (not deprecated `before_llm_cb`)
+✅ Uses Pydantic models for clean data management
+
+**How It Works:**
+1. Vision processor analyzes frame → calls `agent.update_visual_context()`
+2. Context stored in Pydantic `VisualContextStore`
+3. When user speaks → `llm_node` called automatically
+4. `llm_node` injects fresh visual context as system message
+5. LLM receives context → generates response with visual awareness
+6. Tavus avatar speaks response that acknowledges what it sees!
 
 ### Issue 2: Vision not starting
 
@@ -171,25 +195,103 @@ Instead of updating instructions, we need to inject visual context as a "system 
 Avatar should say something like:
 > "أرى أنك تحمل هاتفًا في يدك" (I see you're holding a phone in your hand)
 
-## Next Steps if Not Working
+## Implementation Details (Current)
 
-If visual context still isn't reaching responses:
+### Architecture Pattern: llm_node Override
 
-1. **Try session.say() injection**
-   - Inject as actual user message
-   - Force avatar to "hear" the visual context
+The current implementation uses the **LiveKit Agents 1.0** pattern:
 
-2. **Use conversation context**
-   - Prepend visual context to each user message
-   - Make it part of the conversation flow
+```python
+class VisualAwareAgent(Agent):
+    async def llm_node(self, chat_ctx, tools, model_settings):
+        # Get fresh visual context from Pydantic store
+        current_visual = self.visual_store.get_current()
 
-3. **Custom Tavus API injection**
-   - Use Tavus API to inject context directly
-   - Update conversation metadata
+        if current_visual and current_visual.is_fresh:
+            # Inject as system message
+            chat_ctx.add_message(
+                role="system",
+                content=current_visual.to_injection_text()
+            )
+
+        # Delegate to default LLM processing
+        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+            yield chunk
+```
+
+### Pydantic Models
+
+**VisualAnalysis** - Represents a single vision analysis
+```python
+class VisualAnalysis(BaseModel):
+    content: str  # Analysis text
+    timestamp: datetime  # When created
+
+    @property
+    def is_fresh(self) -> bool:
+        return self.age_seconds < 10
+```
+
+**VisualContextStore** - Thread-safe storage
+```python
+class VisualContextStore(BaseModel):
+    latest_analysis: Optional[VisualAnalysis]
+    max_age_seconds: float = 15.0
+```
+
+### Benefits of This Approach
+
+1. ✅ **Reliable** - Context injected before EVERY LLM call
+2. ✅ **Clean** - Uses Pydantic for type safety and validation
+3. ✅ **Modern** - Uses LiveKit Agents 1.0 patterns (not deprecated APIs)
+4. ✅ **Automatic** - No manual intervention needed
+5. ✅ **Testable** - Easy to verify with `agent.get_visual_status()`
+
+## Legacy Approaches (Not Recommended)
+
+### ❌ Updating Instructions
+Problem: Instructions may be cached by Tavus, not used every turn
+
+### ❌ session.say() injection
+Problem: Creates fake user messages, confuses conversation flow
+
+### ❌ Prepending to user messages
+Problem: Pollutes user input, hard to maintain
 
 ## File Locations
 
+### Core Implementation
 - Main agent: `/var/www/avatar /avatary/agent.py`
+- Visual-aware agent: `/var/www/avatar /avatary/visual_aware_agent.py` ⭐ NEW
+- Pydantic models: `/var/www/avatar /avatary/visual_context_models.py` ⭐ NEW
+- Vision processor: `/var/www/avatar /avatary/vision_processor.py`
+- Vision agent: `/var/www/avatar /avatary/vision_agent.py`
+
+### Deprecated (backward compatibility)
+- Context manager: `/var/www/avatar /avatary/conversation_context_manager.py` (use VisualAwareAgent instead)
+
+### Configuration & Logs
 - Vision logs: `/var/www/avatar /avatary/agent.log`
 - Frontend logs: Browser console
 - Configuration: `/var/www/avatar /avatary/.env`
+
+## Quick Start
+
+1. Start the agent (it will automatically use VisualAwareAgent)
+2. Connect with camera enabled
+3. Ask: "ماذا ترى؟" (What do you see?)
+4. Avatar should describe what it sees!
+
+## Monitoring
+
+Check logs in real-time:
+```bash
+tail -f /var/www/avatar\ /avatary/agent.log | grep -E "👁️|✅|💉"
+```
+
+Expected output:
+```
+👁️  Visual analysis received: أرى شخصًا...
+✅ Visual context stored (will inject before next LLM call)
+💉 Injecting visual context (2.3s old)
+```
