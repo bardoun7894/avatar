@@ -90,7 +90,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+                className="w-full py-3 px-6 bg-white/10 backdrop-blur-lg border border-white/20 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:bg-white/20 hover:shadow-xl hover:shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg relative overflow-hidden group animate-pulse"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -101,7 +101,10 @@ export default function Home() {
                     جارٍ الاتصال...
                   </span>
                 ) : (
-                  'ابدأ المحادثة / Start Call'
+                  <>
+                    'ابدأ المحادثة / Start Call'
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-1000"></span>
+                  </>
                 )}
               </button>
             </form>
@@ -113,21 +116,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Features */}
-          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
-              <div className="text-2xl mb-2">🤖</div>
-              <p className="text-xs text-gray-300">AI Avatar</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
-              <div className="text-2xl mb-2">🎙️</div>
-              <p className="text-xs text-gray-300">Voice</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
-              <div className="text-2xl mb-2">💬</div>
-              <p className="text-xs text-gray-300">Chat</p>
-            </div>
-          </div>
         </div>
       </div>
     </>
