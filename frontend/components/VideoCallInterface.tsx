@@ -98,6 +98,8 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
 
           // Enable camera and microphone after connection is established
           try {
+            if (!room) return
+
             console.log('📹 Enabling camera and microphone...')
             await room.localParticipant.enableCameraAndMicrophone()
 
@@ -107,6 +109,9 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
               localVideoTrack.attach(localVideoRef.current)
               console.log('✅ Local video attached')
             }
+
+            // Note: Agent auto-joins in dev mode, no dispatch needed
+            console.log('⏳ Waiting for AI agent to join...')
           } catch (error) {
             console.error('❌ Failed to enable camera/microphone:', error)
           }
