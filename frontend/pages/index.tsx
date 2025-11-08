@@ -1,11 +1,10 @@
 import Head from 'next/head'
 import { useState } from 'react'
 import { useRouter } from 'next/router'
+import { motion } from 'framer-motion'
 
 export default function Home() {
   const router = useRouter()
-  const [roomName, setRoomName] = useState('')
-  const [userName, setUserName] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleJoinCall = async (e: React.FormEvent) => {
@@ -13,12 +12,12 @@ export default function Home() {
     setLoading(true)
 
     try {
-      // Navigate to call page with parameters
+      // Navigate to call page with default parameters
       await router.push({
         pathname: '/call',
         query: {
-          room: roomName || `ornina-${Date.now()}`,
-          user: userName || 'Guest',
+          room: `ornina-${Date.now()}`,
+          user: 'Guest',
         },
       })
     } catch (error) {
@@ -40,83 +39,161 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-pink-600/20"></div>
 
         {/* Animated background blobs */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <motion.div 
+          className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/30 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
+        ></motion.div>
+        <motion.div 
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            repeatType: "reverse",
+            delay: 1,
+          }}
+        ></motion.div>
 
         {/* Main content */}
-        <div className="relative z-10 w-full max-w-md px-6">
+        <motion.div 
+          className="relative z-10 w-full max-w-md px-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
           {/* Logo/Brand */}
-          <div className="mb-8 text-center">
-            <h1 className="text-5xl font-bold text-white mb-2">Ornina</h1>
-            <p className="text-xl text-gray-300">AI Avatar System</p>
-            <p className="text-sm text-gray-400 mt-2">شركة أورنينا للذكاء الاصطناعي</p>
-          </div>
+          <motion.div 
+            className="mb-8 text-center"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <motion.h1 
+              className="text-5xl font-bold text-white mb-2"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            >
+              Ornina
+            </motion.h1>
+            <motion.p 
+              className="text-xl text-gray-300"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              AI Avatar System
+            </motion.p>
+            <motion.p 
+              className="text-sm text-gray-400 mt-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              شركة أورنينا للذكاء الاصطناعي
+            </motion.p>
+          </motion.div>
 
-          {/* Join Call Form */}
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 shadow-2xl">
-            <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+          {/* Join Call Form - Glass morphism effect */}
+          <motion.div 
+            className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 shadow-2xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            whileHover={{ 
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              backgroundColor: "rgba(255, 255, 255, 0.15)"
+            }}
+          >
+            <motion.h2 
+              className="text-2xl font-semibold text-white mb-6 text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 1 }}
+            >
               انضم للمحادثة
-            </h2>
+            </motion.h2>
 
             <form onSubmit={handleJoinCall} className="space-y-4">
-              <div>
-                <label htmlFor="userName" className="block text-sm font-medium text-gray-200 mb-2">
-                  الاسم / Name
-                </label>
-                <input
-                  type="text"
-                  id="userName"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="أدخل اسمك"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent transition-all"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="roomName" className="block text-sm font-medium text-gray-200 mb-2">
-                  رمز الغرفة / Room Code (Optional)
-                </label>
-                <input
-                  type="text"
-                  id="roomName"
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  placeholder="اتركه فارغاً لغرفة جديدة"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent transition-all"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 px-6 bg-white/10 backdrop-blur-lg border border-white/20 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:bg-white/20 hover:shadow-xl hover:shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg relative overflow-hidden group animate-pulse"
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {loading ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    جارٍ الاتصال...
-                  </span>
-                ) : (
-                  <>
-                    'ابدأ المحادثة / Start Call'
-                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-1000"></span>
-                  </>
-                )}
-              </button>
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 px-6 bg-white/10 backdrop-blur-lg border border-white/20 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:bg-white/20 hover:shadow-xl hover:shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg relative overflow-hidden group"
+                  whileHover={{ 
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center">
+                      <motion.div 
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mr-3"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      ></motion.div>
+                      جارٍ الاتصال...
+                    </span>
+                  ) : (
+                    <motion.span
+                      initial={{ opacity: 0.8 }}
+                      whileHover={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      ابدأ المحادثة / Start Call
+                    </motion.span>
+                  )}
+                  <motion.div 
+                    className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                    animate={{ translateX: loading ? "100%" : "-100%" }}
+                    transition={{ 
+                      duration: 1.5, 
+                      repeat: loading ? Infinity : 0,
+                      ease: "easeInOut"
+                    }}
+                  ></motion.div>
+                </motion.button>
+              </motion.div>
             </form>
 
             {/* Info */}
-            <div className="mt-6 text-center text-sm text-gray-400">
-              <p>اتصل بنا: 3349028</p>
-              <p className="mt-1">دمشق - المزرعة - مقابل وزارة التربية</p>
-            </div>
-          </div>
+            <motion.div 
+              className="mt-6 text-center text-sm text-gray-400"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 1.2 }}
+            >
+              <motion.p 
+                className="mb-1"
+                whileHover={{ color: "#ffffff" }}
+                transition={{ duration: 0.2 }}
+              >
+                اتصل بنا: 3349028
+              </motion.p>
+              <motion.p 
+                whileHover={{ color: "#ffffff" }}
+                transition={{ duration: 0.2 }}
+              >
+                دمشق - المزرعة - مقابل وزارة التربية
+              </motion.p>
+            </motion.div>
+          </motion.div>
 
-        </div>
+        </motion.div>
       </div>
     </>
   )

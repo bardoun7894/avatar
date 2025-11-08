@@ -201,6 +201,30 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
           }])
         })
 
+        // Listen for transcriptions (speech-to-text)
+        room.on(RoomEvent.TranscriptionReceived, (segments, participant, publication) => {
+          console.log('📝 Transcription received:', segments)
+
+          // Combine all segments into one message
+          const transcriptText = segments.map(s => s.text).join(' ')
+
+          if (transcriptText && transcriptText.trim()) {
+            // Determine role based on participant
+            const isAgent = participant?.identity?.includes('agent') || participant?.identity?.includes('tavus')
+            const role = isAgent ? 'assistant' : 'user'
+
+            console.log(`💬 Adding ${role} transcript:`, transcriptText)
+
+            setMessages(prev => [...prev, {
+              id: `transcript-${Date.now()}`,
+              role: role,
+              content: transcriptText,
+              timestamp: new Date(),
+              userName: participant?.identity || (isAgent ? 'Ornina AI' : 'You')
+            }])
+          }
+        })
+
         // Generate token and connect
         // For now, use direct connection with room name
         // In production, get token from your backend API

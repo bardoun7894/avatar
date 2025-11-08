@@ -1,0 +1,149 @@
+
+> ornina-avatar-frontend@1.0.0 dev
+> next dev -p 3000
+
+  ▲ Next.js 14.2.33
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ ⨯ ./pages/index.tsx:4:1
+Module not found: Can't resolve 'framer-motion'
+[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
+[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
+[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 5 |[39m[0m
+[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
+[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./pages/index.tsx:4:1
+Module not found: Can't resolve 'framer-motion'
+[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
+[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
+[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 5 |[39m[0m
+[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
+[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./pages/index.tsx:4:1
+Module not found: Can't resolve 'framer-motion'
+[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
+[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
+[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 5 |[39m[0m
+[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
+[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
+
+https://nextjs.org/docs/messages/module-not-found
+ GET / 500 in 3874ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 500 in 9ms
+ GET / 500 in 35ms
+ ✓ Compiled /_error in 448ms (266 modules)
+ GET /_next/static/webpack/a5900ce8bb851215.webpack.hot-update.json 404 in 45ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ○ Compiling / ...
+ ✓ Compiled / in 1894ms (727 modules)
+ GET /_next/static/webpack/a5900ce8bb851215.webpack.hot-update.json 404 in 1869ms
+ GET /_next/static/webpack/a5900ce8bb851215.webpack.hot-update.json 404 in 72ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 169ms
+ GET / 200 in 169ms
+ GET / 200 in 107ms
+ GET / 200 in 59ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 11ms
+ GET / 200 in 18ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 8ms
+ GET / 200 in 9ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 6ms
+ ○ Compiling /call ...
+ ✓ Compiled /call in 1228ms (745 modules)
+ ✓ Compiled /api/token in 102ms (143 modules)
+ POST /api/token 200 in 228ms
+ GET / 200 in 68ms
+ GET / 200 in 41ms
+ GET / 200 in 39ms
+ GET / 200 in 35ms
+ GET / 200 in 14ms
+ GET / 200 in 11ms
+ ⚠ Cross origin request detected from 184.174.37.148 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET / 200 in 40ms
+ GET / 200 in 41ms
+ GET / 200 in 41ms
+ GET / 200 in 64ms
+ GET / 200 in 19ms
+ GET /security.txt 404 in 26ms
+ GET / 200 in 67ms
+ GET / 200 in 69ms
+ GET / 200 in 66ms
+ GET / 200 in 17ms
+ GET /wiki 404 in 15ms
+ ✓ Compiled in 864ms (744 modules)
+ GET / 200 in 100ms
+ GET / 200 in 14ms
+ GET / 200 in 10ms
+ GET / 200 in 44ms
+ GET / 200 in 21ms
+ ✓ Compiled /_error in 210ms (745 modules)
+ GET /robots.txt 404 in 237ms
+ ✓ Compiled in 550ms (744 modules)
+ GET / 200 in 69ms
+ GET / 200 in 17ms
+ GET / 200 in 40ms
+ ✓ Compiled /api/token in 112ms (143 modules)
+ POST /api/token 200 in 144ms
+ ✓ Compiled /_error in 163ms (761 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 200ms
+Killed
+ ✓ Compiled in 414ms (744 modules)
+ GET / 200 in 49ms
+ GET / 200 in 11ms
+ ✓ Compiled /_error in 109ms (745 modules)
+ GET /wiki 404 in 129ms
+ GET / 200 in 59ms
+ ✓ Compiled /api/token in 77ms (143 modules)
+ POST /api/token 200 in 98ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 20ms
+ GET /r8kG 404 in 44ms
+ GET / 200 in 66ms
+ GET / 200 in 38ms
+ POST /api/token 200 in 5ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 21ms
+ GET / 200 in 21ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 9ms
+ POST /api/token 200 in 4ms
+ GET / 200 in 35ms
+ GET / 200 in 48ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 12ms
+ POST /api/token 200 in 4ms
+ GET / 200 in 38ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 12ms
+ POST /api/token 200 in 4ms
+ GET / 200 in 31ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 10ms
+ GET / 200 in 36ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 10ms
+ POST /api/token 200 in 6ms
+ GET / 200 in 38ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 10ms
+ POST /api/token 200 in 4ms
+ GET / 200 in 38ms
+ GET / 200 in 12ms
+ GET /wiki 404 in 8ms
+ GET / 200 in 38ms
+ GET / 200 in 11ms
+ POST /api/token 200 in 4ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 11ms
+ GET / 200 in 38ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 8ms
+ GET / 200 in 36ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 10ms
+ POST /api/token 200 in 6ms

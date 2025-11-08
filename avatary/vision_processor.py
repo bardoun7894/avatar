@@ -75,16 +75,24 @@ class VisionProcessor:
             # Encode image to base64
             base64_image = base64.b64encode(image_bytes).decode('utf-8')
 
-            # Prepare prompt
-            prompt = """أنت مساعد ذكي يمكنه رؤية الصور. صف ما تراه في الصورة بوضوح.
-You are an AI assistant that can see images. Describe what you see clearly.
+            # Prepare prompt - Professional exhibition-focused vision prompt
+            prompt = """أنت مساعد ذكي في معرض تقنيات الذكاء الاصطناعي. قم بتحليل المشهد بطريقة احترافية.
 
-Focus on:
-- People and their actions
-- Objects being held or shown
-- Text or documents visible
-- Overall scene context
-"""
+You are an intelligent assistant at an AI technology exhibition. Analyze the scene professionally.
+
+Your task:
+1. Identify the main subject/activity in the image
+2. Note any interactive elements or demonstrations
+3. Assess the setting context (presentation, discussion, exhibition floor)
+4. Provide brief, professional observations suitable for an AI showcase
+
+Do NOT:
+- Describe people's personal features or clothing in detail
+- Make assumptions about individuals
+- Include irrelevant background details
+
+Keep response concise and professional (2-3 sentences max).
+Respond in Arabic first, then English."""
 
             if context:
                 prompt += f"\n\nAdditional context: {context}"

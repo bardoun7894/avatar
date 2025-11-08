@@ -19,6 +19,7 @@ import os
 import logging
 import re
 import asyncio
+import time
 from prompts import AGENT_INSTRUCTIONS
 from local_mcp_server import get_local_tools, call_tool
 from conversation_logger import ConversationLogger
@@ -30,14 +31,24 @@ from vision_processor import VisionProcessor
 from visual_context_models import VisualContextStore
 from visual_aware_agent import VisualAwareAgent
 
-# Import face recognition system (InsightFace)
+# Import workflow analyzer for performance tracking
+from workflow_analyzer import workflow_analyzer
+
+# Import face recognition system (InsightFace) - will be loaded lazily
+FACE_RECOGNITION_ENABLED = True
+face_recognizer = None
+
 try:
-    from insightface_recognition import face_recognizer
-    FACE_RECOGNITION_ENABLED = True
-    print("✅ Face recognition enabled (InsightFace)")
-except ImportError:
+    # Just check if module exists - don't load it yet
+    import importlib.util
+    spec = importlib.util.find_spec("insightface")
+    if spec is None:
+        FACE_RECOGNITION_ENABLED = False
+    else:
+        print("✅ Face recognition available (will load when needed)")
+except Exception as e:
     FACE_RECOGNITION_ENABLED = False
-    print("⚠️  Face recognition disabled (install: pip install insightface onnxruntime)")
+    print(f"⚠️  Face recognition disabled: {e}")
 
 load_dotenv()
 
@@ -90,6 +101,9 @@ conversation_context = {
 }
 
 async def entrypoint(ctx: agents.JobContext):
+    # Start workflow tracking
+    workflow_analyzer.start_step("Connection Initialization")
+
     print("\n" + "="*60)
     print("اتصال جديد! - NEW CONNECTION!")
     print("="*60 + "\n")
@@ -143,14 +157,16 @@ async def entrypoint(ctx: agents.JobContext):
         print(f"\n[{role.upper()}]: {content[:100]}...")
 
         try:
-            conversation_logger.save_message(
-                conversation_id=conversation_id,
-                role=role,
-                content=content,
-                room_name=ctx.room.name,
-                metadata={"language": "ar"}
-            )
-            print(f"تم حفظ رسالة - {role} message saved!")
+            # DISABLED: Using prof_manager instead to avoid duplicates
+            # conversation_logger.save_message(
+            #     conversation_id=conversation_id,
+            #     role=role,
+            #     content=content,
+            #     room_name=ctx.room.name,
+            #     metadata={"language": "ar"}
+            # )
+            # print(f"تم حفظ رسالة - {role} message saved!")
+            pass  # Messages will be saved via prof_manager instead
 
             # Extract user info if user message
             if role == "user":
@@ -212,6 +228,9 @@ async def entrypoint(ctx: agents.JobContext):
     session_config["vad"] = silero.VAD.load()
     print("التعرف على الكلام العربي جاهز - Arabic STT ready")
     print("VAD (Voice Activity Detection) مفعل - VAD enabled")
+
+    workflow_analyzer.complete_step()
+    workflow_analyzer.start_step("Session & Agent Configuration")
 
     session = AgentSession(**session_config)
 
@@ -400,6 +419,9 @@ async def entrypoint(ctx: agents.JobContext):
         ctx.add_shutdown_callback(save_final_conversation)
         print("✅ Shutdown callback registered (professional system)")
 
+        workflow_analyzer.complete_step()
+        workflow_analyzer.start_step("Starting Avatar Session")
+
         # Start the session
         await session.start(
             room=ctx.room,
@@ -409,6 +431,8 @@ async def entrypoint(ctx: agents.JobContext):
             ),
         )
 
+        workflow_analyzer.complete_step()
+
         print("\n" + "="*60)
         print("الوكيل جاهز! - AGENT READY!")
         print("="*60)
@@ -417,49 +441,128 @@ async def entrypoint(ctx: agents.JobContext):
         print("قل: السلام عليكم - Say: Assalamu Alaikum")
         print("="*60 + "\n")
 
-        # Send initial greeting
-        print("🎤 Sending initial greeting...")
-        await session.say(
-            "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟",
-            allow_interruptions=True
-        )
-        print("✅ Initial greeting sent!")
-
         # Initialize vision processor
         vision_processor = VisionProcessor()
         vision_task = None
+        greeted_people = set()  # Track who we've already greeted
+        greeting_flags = {
+            "initial_greeting_sent": False,
+            "greeting_lock": False,
+            "first_visual_time": None  # Track when first visual update arrived
+        }  # Track if we sent initial greeting with lock
 
         async def handle_visual_update(analysis: str, frame_bytes: bytes = None):
             """
             Handle visual analysis updates with face recognition
-            Uses new llm_node injection pattern (LiveKit Agents 1.0)
+            Greets recognized ministers by name FIRST, or uses general greeting if not recognized
+            Only sends ONE greeting per session
             """
-            print(f"👁️  Visual analysis received: {analysis[:100]}...")
+            nonlocal greeted_people, greeting_flags
 
             # Try face recognition if enabled and frame provided
             recognized_person = None
             if FACE_RECOGNITION_ENABLED and frame_bytes:
                 try:
+                    # Lazy load face recognizer on first use
+                    global face_recognizer
+                    if face_recognizer is None:
+                        from insightface_recognition import face_recognizer as fr
+                        face_recognizer = fr
+
+                    workflow_analyzer.start_step("Face Recognition")
                     match = face_recognizer.recognize_person(frame_bytes)
+                    workflow_analyzer.complete_step(matched=match.matched if match else False)
                     if match.matched:
                         recognized_person = match.user_name
                         print(f"👤 RECOGNIZED: {match.user_name} (confidence: {match.confidence:.0%})")
-                        # Add recognition to analysis
-                        recognition_text = f"\n\n🎯 التعرف على الشخص / Person Identified:\n{match.user_name} ({match.phone})"
-                        analysis = analysis + recognition_text
+
+                        # Greet them if we haven't already AND no greeting has been sent yet
+                        if match.phone not in greeted_people and not greeting_flags["initial_greeting_sent"]:
+                            greeting_flags["initial_greeting_sent"] = True
+                            greeted_people.add(match.phone)
+
+                            # Determine user type and provide appropriate greeting
+                            user_type = "guest"
+                            user_context = ""
+
+                            # Check if user is a minister
+                            if "Abd Salam Haykal" in match.user_name or "عبد السلام حيقل" in match.user_name:
+                                user_type = "minister"
+                                greeting = f"مرحباً سيدي الوزير عبد السلام حيقل، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودكم."
+                                user_context = "Government Minister: Abd Salam Haykal"
+                            elif "Asaad Chaibani" in match.user_name or "أسعد شيباني" in match.user_name:
+                                user_type = "minister"
+                                greeting = f"مرحباً سيدي الوزير أسعد شيباني، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودكم."
+                                user_context = "Government Minister: Asaad Chaibani"
+                            elif "Mohamed Bardouni" in match.user_name or "Bardouni" in match.user_name:
+                                user_type = "developer"
+                                greeting = f"مرحباً سيدي   محمد   أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودكم ونرحب بك في أورنينا."
+                                user_context = "Developer: Mohamed Bardouni"
+                            # Check if user is a CEO/Executive
+                            elif "Radwan Nassar" in match.user_name or "رضوان نصار" in match.user_name:
+                                user_type = "ceo"
+                                greeting = f"مرحباً السيد رضوان نصار، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودك."
+                                user_context = "CEO of Ornina Media: Radwan Nassar"
+                            else:
+                                # For other recognized people - include their name in greeting
+                                user_type = "recognized_guest"
+                                greeting = f"مرحباً السيد {match.user_name}، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودك."
+                                user_context = f"Recognized Guest: {match.user_name}"
+
+                            print(f"🎤 Greeting {user_type}: {greeting}")
+                            print(f"   👥 Type: {user_context}")
+
+                            workflow_analyzer.start_step("Deliver First Greeting")
+                            await session.say(greeting, allow_interruptions=True)
+                            workflow_analyzer.complete_step(person=match.user_name, user_type=user_type)
+
+                            # Print performance report after first greeting
+                            workflow_analyzer.print_report()
+
+                        # Add recognition to context
+                        recognition_text = f"\n\n👤 Person: {match.user_name}"
+                        analysis = recognition_text
+                    else:
+                        # Not recognized yet - wait a few seconds before sending general greeting
+                        # This gives face recognition multiple attempts to match
+                        if not greeting_flags["initial_greeting_sent"]:
+                            # Record first visual update time
+                            if greeting_flags["first_visual_time"] is None:
+                                greeting_flags["first_visual_time"] = time.time()
+                                print(f"⏳ First visual update received. Waiting for face recognition...")
+
+                            # Wait at least 3 seconds before sending general greeting
+                            elapsed = time.time() - greeting_flags["first_visual_time"]
+                            if elapsed > 3:
+                                # Still not recognized after 3 seconds, send general greeting
+                                greeting_flags["initial_greeting_sent"] = True
+                                general_greeting = "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟"
+                                print(f"🎤 Sending general greeting (person not recognized after {elapsed:.1f}s)")
+                                workflow_analyzer.start_step("Deliver First Greeting")
+                                await session.say(general_greeting, allow_interruptions=True)
+                                workflow_analyzer.complete_step(person="Unknown")
+
+                                # Print performance report after first greeting
+                                workflow_analyzer.print_report()
+                            else:
+                                print(f"   ⏳ Still waiting for recognition... {3-elapsed:.1f}s remaining")
+
                 except Exception as e:
                     print(f"⚠️  Face recognition error: {e}")
+                    # If error and no greeting sent yet, send general greeting ONLY ONCE
+                    if not greeting_flags["initial_greeting_sent"]:
+                        greeting_flags["initial_greeting_sent"] = True
+                        general_greeting = "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟"
+                        print(f"🎤 Sending general greeting (recognition error)")
+                        await session.say(general_greeting, allow_interruptions=True)
 
             # Update visual context in Pydantic store
-            # This will be automatically injected before next LLM call
-            agent.update_visual_context(analysis)
-
-            # Get and log status
-            status = agent.get_visual_status()
-            print(f"✅ Visual context stored (will inject before next LLM call)")
-            print(f"   Fresh: {status.get('is_fresh', False)}, Age: {status.get('age_seconds', 0):.1f}s")
             if recognized_person:
-                print(f"   👤 Person: {recognized_person}")
+                agent.update_visual_context(f"Current person: {recognized_person}")
+                print(f"✅ Visual context updated: {recognized_person}")
+            else:
+                # No one recognized
+                print(f"👤 No person recognized")
 
         # Monitor for video tracks
         async def monitor_video_tracks():
@@ -514,6 +617,8 @@ async def entrypoint(ctx: agents.JobContext):
                                 print(f"📹 Got user video track from {participant.identity}")
                                 print("🎥 Starting vision analysis...")
 
+                                workflow_analyzer.start_step("Vision Processing Startup")
+
                                 # Start continuous vision analysis
                                 try:
                                     vision_task = asyncio.create_task(
@@ -522,6 +627,7 @@ async def entrypoint(ctx: agents.JobContext):
                                             callback=handle_visual_update
                                         )
                                     )
+                                    workflow_analyzer.complete_step()
                                     print("✅ Vision analysis task started!")
                                     return
                                 except Exception as e:

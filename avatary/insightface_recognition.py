@@ -16,6 +16,13 @@ import logging
 from insightface.app import FaceAnalysis
 from models import FaceMatch
 
+# Import workflow analyzer
+try:
+    from workflow_analyzer import workflow_analyzer
+    WORKFLOW_TRACKING = True
+except ImportError:
+    WORKFLOW_TRACKING = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -143,7 +150,7 @@ class InsightFaceDatabase:
 
 
 class InsightFaceRecognition:
-    """Face recognition using InsightFace"""
+    """Face recognition using InsightFace with lazy loading for memory efficiency"""
 
     def __init__(self, threshold: float = 0.4):
         """
@@ -156,15 +163,29 @@ class InsightFaceRecognition:
         """
         self.threshold = threshold
         self.db = InsightFaceDatabase()
+        self.app = None  # Lazy load - only load when first needed
+        self._loading = False
 
-        # Initialize InsightFace
-        logger.info("🔄 Loading InsightFace model...")
-        self.app = FaceAnalysis(
-            name='buffalo_l',  # High accuracy model
-            providers=['CPUExecutionProvider']  # Use CPU (can use CUDA if available)
-        )
-        self.app.prepare(ctx_id=0, det_size=(640, 640))
-        logger.info("✅ InsightFace model loaded!")
+    def _ensure_model_loaded(self):
+        """Lazy load InsightFace model only when needed"""
+        if self.app is None and not self._loading:
+            self._loading = True
+
+            if WORKFLOW_TRACKING:
+                workflow_analyzer.start_step("InsightFace Model Loading (Lazy)")
+
+            logger.info("🔄 Loading InsightFace model (lazy load)...")
+            self.app = FaceAnalysis(
+                name='buffalo_l',  # High accuracy model
+                providers=['CPUExecutionProvider']  # Use CPU
+            )
+            self.app.prepare(ctx_id=0, det_size=(640, 640))
+
+            if WORKFLOW_TRACKING:
+                workflow_analyzer.complete_step()
+
+            logger.info("✅ InsightFace model loaded!")
+            self._loading = False
 
     def register_person(
         self,
@@ -186,6 +207,9 @@ class InsightFaceRecognition:
             True if registered successfully
         """
         try:
+            # Ensure model is loaded (lazy loading)
+            self._ensure_model_loaded()
+
             # Convert bytes to PIL Image
             img = Image.open(io.BytesIO(image_bytes))
             img_array = np.array(img.convert('RGB'))
@@ -233,6 +257,9 @@ class InsightFaceRecognition:
             FaceMatch object with recognition results
         """
         try:
+            # Ensure model is loaded (lazy loading)
+            self._ensure_model_loaded()
+
             # Convert bytes to PIL Image
             img = Image.open(io.BytesIO(image_bytes))
             img_array = np.array(img.convert('RGB'))
