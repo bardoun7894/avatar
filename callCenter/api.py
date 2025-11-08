@@ -58,9 +58,9 @@ class CallCenterState:
 # Initialize state
 state = CallCenterState()
 config = CallCenterConfig()
-rules_engine = RulesEngine(config)
-call_router = CallRouter(config, rules_engine)
-crm_system = CRMSystem(config)
+rules_engine = RulesEngine()
+call_router = CallRouter()
+crm_system = CRMSystem()
 
 # ============================================================================
 # LIFESPAN EVENTS

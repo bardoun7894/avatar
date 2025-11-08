@@ -12,6 +12,16 @@ load_dotenv()
 
 
 # ============================================================================
+# CONFIG CLASS (for api.py compatibility)
+# ============================================================================
+
+class CallCenterConfig:
+    """Call Center Configuration object"""
+    def __init__(self):
+        pass  # All config is module-level constants
+
+
+# ============================================================================
 # CALL CENTER MODE CONFIGURATION
 # ============================================================================
 
