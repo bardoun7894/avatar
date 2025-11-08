@@ -16,6 +16,22 @@ from .models import (
 )
 from .rules_engine import get_rules_engine
 from .config import get_prompts
+from .prompts.routing_prompts import (
+    ReceptionPrompts,
+    SalesPrompts,
+    ComplaintsPrompts,
+    IntentDetectionRules,
+    IntentDetection,
+    RoutingDecision as IntentRoutingDecision,
+    route_by_intent,
+    CustomerInfo,
+    IntentEnum,
+    DepartmentEnum,
+    RECEPTION_PERSONA,
+    SALES_PERSONA,
+    COMPLAINTS_PERSONA,
+    DepartmentPersona,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +200,94 @@ class CallRouter:
         Route call to appropriate department based on service type
         """
         return self.rules_engine.route_to_department(service_type)
+
+    def detect_intent_from_message(self, message: str, language: str = "ar") -> IntentEnum:
+        """
+        Detect customer intent from their message
+        Uses keyword matching from routing_prompts
+        """
+        return IntentDetectionRules.detect_intent(message, language)
+
+    def route_by_detected_intent(self, intent: IntentEnum) -> DepartmentEnum:
+        """
+        Route customer to appropriate department based on detected intent
+        """
+        return route_by_intent(intent)
+
+    def get_intent_routing_decision(
+        self,
+        call_id: str,
+        message: str,
+        customer_info: Optional[CustomerInfo] = None,
+        language: str = "ar"
+    ) -> IntentRoutingDecision:
+        """
+        Create a complete routing decision based on intent detection
+        Returns Pydantic model with all routing details
+        """
+        # Detect intent from message
+        intent = self.detect_intent_from_message(message, language)
+
+        # Determine target department
+        department = self.route_by_detected_intent(intent)
+
+        # Get keywords that triggered this intent
+        keywords = []
+        if intent == IntentEnum.COMPLAINT:
+            keywords = IntentDetectionRules.COMPLAINT_KEYWORDS.get(language, [])
+        elif intent == IntentEnum.SERVICE_INQUIRY:
+            keywords = IntentDetectionRules.SERVICE_INQUIRY_KEYWORDS.get(language, [])
+        elif intent == IntentEnum.TRAINING_INQUIRY:
+            keywords = IntentDetectionRules.TRAINING_KEYWORDS.get(language, [])
+
+        # Create intent detection result
+        intent_detection = IntentDetection(
+            intent=intent,
+            department=department,
+            confidence=0.95 if any(kw in message.lower() for kw in keywords) else 0.7,
+            keywords=keywords,
+            reasoning=f"Detected {intent.value} from customer message - routing to {department.value}"
+        )
+
+        # Create routing decision
+        routing_decision = IntentRoutingDecision(
+            call_id=call_id,
+            customer_info=customer_info or CustomerInfo(),
+            intent_detection=intent_detection,
+            timestamp=datetime.now().isoformat()
+        )
+
+        return routing_decision
+
+    def get_department_greeting(self, department: DepartmentEnum, language: str = "ar") -> str:
+        """Get welcome message for specific department"""
+        if department == DepartmentEnum.SALES:
+            return SalesPrompts.get(language, "welcome")
+        elif department == DepartmentEnum.COMPLAINTS:
+            return ComplaintsPrompts.get(language, "welcome")
+        else:
+            return ReceptionPrompts.get(language, "greeting")
+
+    def get_reception_prompt(self, prompt_key: str, language: str = "ar", **kwargs) -> str:
+        """Get reception department prompt"""
+        return ReceptionPrompts.get(language, prompt_key, **kwargs)
+
+    def get_sales_prompt(self, prompt_key: str, language: str = "ar", **kwargs) -> str:
+        """Get sales department prompt"""
+        return SalesPrompts.get(language, prompt_key, **kwargs)
+
+    def get_complaints_prompt(self, prompt_key: str, language: str = "ar", **kwargs) -> str:
+        """Get complaints department prompt"""
+        return ComplaintsPrompts.get(language, prompt_key, **kwargs)
+
+    def get_department_persona(self, department: DepartmentEnum) -> DepartmentPersona:
+        """Get persona (assistant details) for a specific department"""
+        persona_map = {
+            DepartmentEnum.RECEPTION: RECEPTION_PERSONA,
+            DepartmentEnum.SALES: SALES_PERSONA,
+            DepartmentEnum.COMPLAINTS: COMPLAINTS_PERSONA,
+        }
+        return persona_map.get(department, RECEPTION_PERSONA)
 
     def get_routing_message(
         self, routing_decision: RoutingDecision, language: str = "ar"

@@ -18,9 +18,162 @@ load_dotenv()
 CALL_CENTER_MODE = os.getenv("CALL_CENTER_MODE", "enabled").lower() == "enabled"
 CALL_CENTER_ENABLED = CALL_CENTER_MODE
 
-# Company Information
-COMPANY_NAME = os.getenv("COMPANY_NAME", "شركتنا")
-COMPANY_NAME_EN = os.getenv("COMPANY_NAME_EN", "Our Company")
+# ============================================================================
+# ORNINA COMPANY INFORMATION (Same as Avatar System)
+# ============================================================================
+
+COMPANY_NAME = os.getenv("COMPANY_NAME", "أورنينا")
+COMPANY_NAME_EN = os.getenv("COMPANY_NAME_EN", "Ornina")
+COMPANY_NAME_FULL = "شركة أورنينا للذكاء الاصطناعي والحلول الرقمية"
+COMPANY_NAME_FULL_EN = "Ornina - AI Solutions & Digital Services"
+
+# Contact Information
+COMPANY_ADDRESS = "سوريا - دمشق - المزرعة - مقابل وزارة التربية"
+COMPANY_ADDRESS_EN = "Syria - Damascus - Al Mezzeh - opposite Ministry of Education"
+COMPANY_PHONE = "3349028"
+COMPANY_PHONE_INTL = "+963-11-3349028"
+
+# Social Media
+COMPANY_SOCIAL_MEDIA = {
+    "tiktok": "@ornina.official",
+    "facebook": "@orninaofficial",
+    "youtube": "@orninaofficial",
+    "instagram": "@ornina.official"
+}
+
+# Services (6 main services from Avatar)
+COMPANY_SERVICES = [
+    {
+        "id": "ai_call_center",
+        "name": "Call Center بالذكاء الاصطناعي",
+        "name_en": "AI Call Center",
+        "description_ar": "نظام ذكي للرد التلقائي على العملاء 24 ساعة على 7 أيام يفهم، يحلل، ويحل المشاكل بصوت طبيعي",
+        "description_en": "24/7 Smart automatic response system that understands, analyzes, and solves problems with natural voice",
+        "benefits": [
+            "استجابة فوری",
+            "توفر التكاليف",
+            "تحليل ذكاء أعمال"
+        ]
+    },
+    {
+        "id": "film_production",
+        "name": "إنتاج الأفلام والمسلسلات بالذكاء الاصطناعي",
+        "name_en": "AI Film & Series Production",
+        "description_ar": "إنتاج محتوى بصري احترافي بتكلفة منخفضة - كتابة سيناريو، تصميم شخصيات، مشاهد، مونتاج",
+        "description_en": "Professional visual content production at low cost - screenplay writing, character design, scenes, editing",
+        "benefits": [
+            "محتوى احترافي",
+            "تكلفة منخفضة",
+            "إنتاج سريع"
+        ]
+    },
+    {
+        "id": "ai_ads",
+        "name": "الإعلانات الذكية بالذكاء الاصطناعي",
+        "name_en": "AI Smart Ads",
+        "description_ar": "إعلانات قصيرة مخصصة لكل منصة (TikTok, Instagram, YouTube) مع تحليل أداء وتحسين تلقائي",
+        "description_en": "Short ads customized for each platform with performance analysis and automatic improvement",
+        "benefits": [
+            "إنتاج سريع 24-48 ساعة",
+            "تحسين مستمر",
+            "متوافق مع جميع المنصات"
+        ]
+    },
+    {
+        "id": "animation_2d_3d",
+        "name": "الأنيميشن 2D/3D بالذكاء الاصطناعي",
+        "name_en": "AI 2D/3D Animation",
+        "description_ar": "رسوم متحركة احترافية للعلامات التجارية - شخصيات كرتونية، بيئات، مؤثرات بصرية",
+        "description_en": "Professional animations for brands - cartoon characters, environments, visual effects",
+        "benefits": [
+            "شخصيات احترافية",
+            "بيئات متقنة",
+            "مؤثرات بصرية متقدمة"
+        ]
+    },
+    {
+        "id": "digital_platform",
+        "name": "المنصة الرقمية الشاملة",
+        "name_en": "Comprehensive Digital Platform",
+        "description_ar": "أداة واحدة لتوليد: فيديوهات، أكواد برمجية، صور، محادثات AI - مناسبة للشركات والمبدعين",
+        "description_en": "One tool to generate videos, code, images, AI chat - suitable for companies and creators",
+        "benefits": [
+            "أداة واحدة شاملة",
+            "واجهة سهلة",
+            "نتائج احترافية"
+        ]
+    },
+    {
+        "id": "web_design_dev",
+        "name": "تصميم وبرمجة المواقع Front/Back End بالذكاء الاصطناعي",
+        "name_en": "AI Website Design & Development",
+        "description_ar": "مواقع متجاوبة، سريعة، آمنة مع تصميم UI/UX حديث وبرمجة متكاملة",
+        "description_en": "Responsive, fast, secure websites with modern UI/UX design and integrated programming",
+        "benefits": [
+            "موقع متجاوب",
+            "أداء سريع",
+            "أمان عالي"
+        ]
+    }
+]
+
+# Training Programs (6 programs from Avatar)
+COMPANY_TRAINING_PROGRAMS = [
+    {
+        "id": "digital_marketing",
+        "name": "احتراف التسويق الرقمي باستخدام أدوات الذكاء الاصطناعي",
+        "name_en": "Digital Marketing Mastery with AI Tools",
+        "hours": 45,
+        "level": "مبتدئ/متوسط",
+        "description": "Prompt Engineering، صناعة المحتوى، استراتيجيات السوشيال ميديا، SEO، الإعلانات المدفوعة",
+        "outcome": "بناء حملة تسويقية كاملة باستخدام AI"
+    },
+    {
+        "id": "film_production_course",
+        "name": "صناعة الأفلام الرقمية باستخدام الذكاء الاصطناعي",
+        "name_en": "Digital Film Production with AI",
+        "hours": 30,
+        "level": "مبتدئ/متوسط",
+        "description": "كتابة السيناريو، تصميم الشخصيات، إنتاج الفيديو، المونتاج والمؤثرات",
+        "outcome": "إنتاج فيلم قصير كامل"
+    },
+    {
+        "id": "ui_ux_design",
+        "name": "تصميم UI/UX باستخدام الذكاء الاصطناعي",
+        "name_en": "UI/UX Design with AI",
+        "hours": 30,
+        "level": "مبتدئ/متوسط",
+        "description": "أساسيات تجربة المستخدم، تصميم الواجهات، Figma وأدوات AI",
+        "outcome": "تصميم تطبيق موبايل أو موقع كامل"
+    },
+    {
+        "id": "coding_basics",
+        "name": "الأساسيات وتعلم توليد الأكواد باستخدام الذكاء الاصطناعي",
+        "name_en": "Coding Fundamentals with AI Code Generation",
+        "hours": 30,
+        "level": "مبتدئ",
+        "description": "Python، JavaScript، قواعد البيانات، استخدام GitHub Copilot وأدوات AI",
+        "outcome": "بناء تطبيق ويب كامل"
+    },
+    {
+        "id": "fashion_design",
+        "name": "تصميم الأزياء الاحترافي باستخدام أدوات الذكاء الاصطناعي",
+        "name_en": "Professional Fashion Design with AI Tools",
+        "hours": 10,
+        "level": "مبتدئ",
+        "description": "تصميم أزياء رقمية، تجربة افتراضية، إنتاج كتالوج رقمي",
+        "outcome": "مجموعة أزياء كاملة"
+    },
+    {
+        "id": "web_design_course",
+        "name": "تصميم وبرمجة مواقع الإنترنت باستخدام الذكاء الاصطناعي",
+        "name_en": "Web Design & Development with AI",
+        "hours": 30,
+        "level": "مبتدئ/متوسط",
+        "description": "HTML، CSS، JavaScript، استخدام AI في التصميم والبرمجة",
+        "outcome": "موقع إلكتروني احترافي كامل"
+    }
+]
 
 # Business Hours
 BUSINESS_HOURS_START = os.getenv("BUSINESS_HOURS_START", "09:00")
