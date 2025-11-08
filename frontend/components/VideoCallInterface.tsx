@@ -205,24 +205,75 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
         room.on(RoomEvent.TranscriptionReceived, (segments, participant, publication) => {
           console.log('📝 Transcription received:', segments)
 
-          // Combine all segments into one message
+          // Combine all segments into transcript text
           const transcriptText = segments.map(s => s.text).join(' ')
 
-          if (transcriptText && transcriptText.trim()) {
-            // Determine role based on participant
-            const isAgent = participant?.identity?.includes('agent') || participant?.identity?.includes('tavus')
-            const role = isAgent ? 'assistant' : 'user'
-
-            console.log(`💬 Adding ${role} transcript:`, transcriptText)
-
-            setMessages(prev => [...prev, {
-              id: `transcript-${Date.now()}`,
-              role: role,
-              content: transcriptText,
-              timestamp: new Date(),
-              userName: participant?.identity || (isAgent ? 'Ornina AI' : 'You')
-            }])
+          if (!transcriptText || !transcriptText.trim()) {
+            console.log('⏭️ Empty transcript, skipping')
+            return
           }
+
+          // Determine role based on participant
+          const isAgent = participant?.identity?.includes('agent') || participant?.identity?.includes('tavus')
+          const role = isAgent ? 'assistant' : 'user'
+          const userName = participant?.identity || (isAgent ? 'Ornina AI' : 'You')
+
+          // Check if this is a final transcript or partial update
+          const isFinal = segments.some(s => s.final === true)
+          console.log(`📝 ${isFinal ? 'FINAL' : 'PARTIAL'} ${role} transcript:`, transcriptText)
+
+          setMessages(prev => {
+            // Find if there's an existing message from this participant that's NOT finalized yet
+            const lastMessageIndex = prev.length - 1
+            const lastMessage = lastMessageIndex >= 0 ? prev[lastMessageIndex] : null
+
+            // Check if the last message is from the same role and participant (ongoing speech)
+            if (lastMessage && lastMessage.role === role && lastMessage.userName === userName && !lastMessage.id.includes('-final')) {
+              // This is a continuation/update of the last message (partial transcript)
+              if (!isFinal) {
+                // Update the last message with new transcript (partial update for real-time feedback)
+                console.log('🔄 Updating partial transcript')
+                const updated = [...prev]
+                updated[lastMessageIndex] = {
+                  ...lastMessage,
+                  content: transcriptText,
+                  timestamp: new Date()
+                }
+                return updated
+              } else {
+                // Final version - replace with finalized content
+                console.log('✅ Finalizing transcript')
+                const updated = [...prev]
+                updated[lastMessageIndex] = {
+                  ...lastMessage,
+                  id: `${lastMessage.id}-final`,
+                  content: transcriptText,
+                  timestamp: new Date()
+                }
+                return updated
+              }
+            } else if (isFinal) {
+              // This is a new final message from a different participant or after silence
+              console.log('✅ Adding new FINAL transcript')
+              return [...prev, {
+                id: `transcript-${Date.now()}-final`,
+                role: role,
+                content: transcriptText,
+                timestamp: new Date(),
+                userName: userName
+              }]
+            } else {
+              // This is a new partial message starting
+              console.log('📝 Starting new partial transcript')
+              return [...prev, {
+                id: `transcript-${Date.now()}`,
+                role: role,
+                content: transcriptText,
+                timestamp: new Date(),
+                userName: userName
+              }]
+            }
+          })
         })
 
         // Generate token and connect
