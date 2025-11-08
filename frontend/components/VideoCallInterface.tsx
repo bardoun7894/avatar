@@ -110,7 +110,29 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
               console.log('✅ Local video attached')
             }
 
-            // Note: Agent auto-joins in dev mode, no dispatch needed
+            // Dispatch agent to the room
+            console.log('🚀 Dispatching agent to room...')
+            try {
+              const dispatchResponse = await fetch('/api/dispatch-agent', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  roomName: room.name,
+                }),
+              })
+
+              if (!dispatchResponse.ok) {
+                const error = await dispatchResponse.json()
+                console.error('❌ Failed to dispatch agent:', error)
+              } else {
+                console.log('✅ Agent dispatch request sent')
+              }
+            } catch (error) {
+              console.error('❌ Error dispatching agent:', error)
+            }
+
             console.log('⏳ Waiting for AI agent to join...')
           } catch (error) {
             console.error('❌ Failed to enable camera/microphone:', error)
