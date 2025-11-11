@@ -12,8 +12,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from livekit import agents
-from livekit.agents import AgentSession, ChatMessage, llm
-from livekit.plugins import openai, silero
+from livekit.agents import AgentSession, ChatMessage, llm, WorkerOptions
+# Note: Do NOT import openai/silero plugins - they have dependency conflicts
+# The agent context (ctx) provides STT/LLM/TTS automatically from environment
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -157,32 +158,37 @@ async def on_session_shutdown(ctx: AgentSession):
     logger.info(f"🔌 Agent disconnecting from room: {ctx.room.name}")
 
 
-def main():
-    """Main entry point - creates and runs the LiveKit agent worker"""
+async def async_main():
+    """Async main function for the agent worker"""
     logger.info("🚀 Call Center Agent starting...")
     logger.info(f"📡 LiveKit URL: {LIVEKIT_URL}")
     logger.info(f"✅ OpenAI API Key set: {bool(OPENAI_API_KEY)}")
 
-    # Create agent worker
-    agent_worker = agents.Worker(
-        url=LIVEKIT_URL,
+    # Create agent worker with WorkerOptions (modern API)
+    opts = WorkerOptions(
+        entrypoint_fnc=entrypoint,  # Main async function to handle sessions
+        ws_url=LIVEKIT_URL,
         api_key=LIVEKIT_API_KEY,
         api_secret=LIVEKIT_API_SECRET,
-        name="call-center-agent",
     )
 
-    # Configure agent with LLM, STT, TTS (will be added to ctx in entrypoint)
-    # This uses the environment variables OPENAI_API_KEY by default
-
-    # Register entrypoint and shutdown handlers
-    agent_worker.on_agent_start(entrypoint)
-    agent_worker.on_agent_shutdown(on_session_shutdown)
+    agent_worker = agents.Worker(opts)
 
     logger.info("✅ Call Center Agent initialized")
     logger.info("🎧 Listening for incoming calls...")
 
-    # Run the worker - this blocks until shutdown
-    agent_worker.run()
+    # Run the worker - this is async and must be awaited
+    await agent_worker.run()
+
+
+def main():
+    """Main entry point - creates asyncio event loop and runs agent"""
+    try:
+        asyncio.run(async_main())
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
