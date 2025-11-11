@@ -104,6 +104,12 @@ async def entrypoint(ctx: agents.JobContext):
     # Start workflow tracking
     workflow_analyzer.start_step("Connection Initialization")
 
+    import sys
+    sys.stderr.write("\n" + "="*60 + "\n")
+    sys.stderr.write("اتصال جديد! - NEW CONNECTION ENTRYPOINT CALLED!\n")
+    sys.stderr.write("="*60 + "\n\n")
+    sys.stderr.flush()
+
     print("\n" + "="*60)
     print("اتصال جديد! - NEW CONNECTION!")
     print("="*60 + "\n")
@@ -117,7 +123,7 @@ async def entrypoint(ctx: agents.JobContext):
     elevenlabs_voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "G1QUjBCuRBbLbAmYlTgl")
 
     print(f"اللغة: العربية - Language: Arabic")
-    print(f"الصوت: OpenAI Alloy - Voice: OpenAI Alloy (supports Arabic)")
+    print(f"الصوت: OpenAI Alloy (ذكر) - Voice: OpenAI Alloy (Male - supports Arabic)")
 
     # Get local tools
     local_tools = get_local_tools()
@@ -319,24 +325,53 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Initialize Tavus video avatar AFTER session creation
     avatar_session = None
+    tavus_log_file = "/tmp/tavus_init.log"
+
     if avatar_provider == "tavus":
         try:
+            with open(tavus_log_file, "a") as f:
+                f.write(f"\n=== Tavus Init Attempt at {os.environ.get('AVATAR_PROVIDER')} ===\n")
+                f.write(f"API Key: {bool(os.environ.get('TAVUS_API_KEY'))}\n")
+                f.write(f"Persona ID: {os.environ.get('TAVUS_PERSONA_ID')}\n")
+                f.write(f"Replica ID: {os.environ.get('TAVUS_REPLICA_ID')}\n")
+                f.flush()
+
             from livekit.plugins import tavus
             print("\nتهيئة Tavus Video Avatar - Initializing Tavus...")
+            print(f"   API Key Set: {bool(os.environ.get('TAVUS_API_KEY'))}")
             print(f"   Persona ID: {os.environ.get('TAVUS_PERSONA_ID', 'NOT SET')}")
             print(f"   Replica ID: {os.environ.get('TAVUS_REPLICA_ID', 'NOT SET')}")
 
+            api_key = os.environ.get("TAVUS_API_KEY")
+            persona_id = os.environ.get("TAVUS_PERSONA_ID")
+            replica_id = os.environ.get("TAVUS_REPLICA_ID")
+
+            if not api_key or not persona_id or not replica_id:
+                raise ValueError(f"Missing Tavus credentials: API_KEY={bool(api_key)}, PERSONA={bool(persona_id)}, REPLICA={bool(replica_id)}")
+
+            with open(tavus_log_file, "a") as f:
+                f.write("Creating TavusAvatarSession...\n")
+                f.flush()
+
             avatar_session = tavus.AvatarSession(
-                api_key=os.environ.get("TAVUS_API_KEY"),
-                persona_id=os.environ.get("TAVUS_PERSONA_ID"),
-                replica_id=os.environ.get("TAVUS_REPLICA_ID"),
+                api_key=api_key,
+                persona_id=persona_id,
+                replica_id=replica_id,
             )
-            print("تم إنشاء Tavus session - Tavus session created")
+            print("✅ تم إنشاء Tavus session - Tavus session created successfully!")
+            with open(tavus_log_file, "a") as f:
+                f.write("✅ Tavus session created successfully!\n")
+                f.flush()
         except Exception as e:
-            print(f"فشل Tavus: {e}")
+            print(f"❌ فشل Tavus: {e}")
+            with open(tavus_log_file, "a") as f:
+                f.write(f"❌ TAVUS ERROR: {e}\n")
+                import traceback
+                f.write(traceback.format_exc())
+                f.flush()
             import traceback
             traceback.print_exc()
-            print("الاستمرار بدون فيديو - Continuing in audio-only mode...")
+            print("⚠️  الاستمرار بدون فيديو - Continuing in audio-only mode...")
             avatar_provider = "audio"
             avatar_session = None
 
@@ -434,22 +469,23 @@ async def entrypoint(ctx: agents.JobContext):
         workflow_analyzer.complete_step()
 
         print("\n" + "="*60)
-        print("الوكيل جاهز! - AGENT READY!")
+        print("الوكيل الذكر جاهز! - MALE AGENT READY!")
         print("="*60)
         print("الاستماع للغة العربية - Listening for Arabic...")
-        print("يتحدث: OpenAI Alloy - Speaking: OpenAI Alloy")
+        print("يتحدث: OpenAI Alloy (ذكر) - Speaking: OpenAI Alloy (Male)")
         print("قل: السلام عليكم - Say: Assalamu Alaikum")
         print("="*60 + "\n")
 
         # Initialize vision processor
         vision_processor = VisionProcessor()
         vision_task = None
-        greeted_people = set()  # Track who we've already greeted
+        greeted_people = set()  # Track who we've already greeted in this session
         greeting_flags = {
-            "initial_greeting_sent": False,
+            "initial_greeting_sent": False,  # ONE greeting per entire session
             "greeting_lock": False,
-            "first_visual_time": None  # Track when first visual update arrived
-        }  # Track if we sent initial greeting with lock
+            "first_visual_time": None,  # Track when first visual update arrived
+            "session_identity": ctx.room.name or f"session-{os.urandom(4).hex()}"  # Unique session ID
+        }
 
         async def handle_visual_update(analysis: str, frame_bytes: bytes = None):
             """
@@ -476,41 +512,42 @@ async def entrypoint(ctx: agents.JobContext):
                         recognized_person = match.user_name
                         print(f"👤 RECOGNIZED: {match.user_name} (confidence: {match.confidence:.0%})")
 
-                        # Greet them if we haven't already AND no greeting has been sent yet
-                        if match.phone not in greeted_people and not greeting_flags["initial_greeting_sent"]:
+                        # ✅ SINGLE GREETING PER SESSION - Only greet once at the beginning
+                        if not greeting_flags["initial_greeting_sent"]:
                             greeting_flags["initial_greeting_sent"] = True
                             greeted_people.add(match.phone)
 
-                            # Determine user type and provide appropriate greeting
+                            # Build simple, natural Arabic greeting based on recognition
+                            # Format: السلام عليكم [with title if VIP, just name if regular]
                             user_type = "guest"
                             user_context = ""
 
-                            # Check if user is a minister
+                            # Check for specific VIPs - use formal titles
                             if "Abd Salam Haykal" in match.user_name or "عبد السلام حيقل" in match.user_name:
                                 user_type = "minister"
-                                greeting = f"مرحباً سيدي الوزير عبد السلام حيقل، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودكم."
+                                greeting = "السلام عليكم سيدي الوزير عبد السلام حيقل، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "Government Minister: Abd Salam Haykal"
                             elif "Asaad Chaibani" in match.user_name or "أسعد شيباني" in match.user_name:
                                 user_type = "minister"
-                                greeting = f"مرحباً سيدي الوزير أسعد شيباني، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودكم."
+                                greeting = "السلام عليكم سيدي الوزير أسعد شيباني، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "Government Minister: Asaad Chaibani"
                             elif "Mohamed Bardouni" in match.user_name or "Bardouni" in match.user_name:
                                 user_type = "developer"
-                                greeting = f"مرحباً سيدي   محمد   أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودكم ونرحب بك في أورنينا."
+                                greeting = "السلام عليكم سيدي محمد، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "Developer: Mohamed Bardouni"
-                            # Check if user is a CEO/Executive
                             elif "Radwan Nassar" in match.user_name or "رضوان نصار" in match.user_name:
                                 user_type = "ceo"
-                                greeting = f"مرحباً السيد رضوان نصار، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودك."
+                                greeting = "السلام عليكم السيد رضوان نصار، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "CEO of Ornina Media: Radwan Nassar"
                             else:
-                                # For other recognized people - include their name in greeting
+                                # Regular recognized person - simple greeting with name
                                 user_type = "recognized_guest"
-                                greeting = f"مرحباً السيد {match.user_name}، أهلاً وسهلاً بك في شركة أورنينا للذكاء الاصطناعي. تشرفنا بوجودك."
+                                greeting = f"السلام عليكم السيد {match.user_name}، أهلاً وسهلاً بك"
                                 user_context = f"Recognized Guest: {match.user_name}"
 
-                            print(f"🎤 Greeting {user_type}: {greeting}")
-                            print(f"   👥 Type: {user_context}")
+                            print(f"🎤 First Greeting ({user_type}): {greeting}")
+                            print(f"   👥 {user_context}")
+                            print(f"   ✅ Session: {greeting_flags['session_identity']} - NO MORE GREETINGS THIS SESSION")
 
                             workflow_analyzer.start_step("Deliver First Greeting")
                             await session.say(greeting, allow_interruptions=True)

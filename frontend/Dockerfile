@@ -21,6 +21,19 @@ COPY . .
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# Accept build args and convert to env vars for Next.js build
+ARG NEXT_PUBLIC_LIVEKIT_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+ENV NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL=${NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL}
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+
 # Build the application
 RUN npm run build
 
@@ -43,8 +56,9 @@ RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
+# The standalone output includes everything needed to run Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static /app/.next/static
 
 USER nextjs
 
@@ -57,4 +71,7 @@ ENV HOSTNAME "0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode == 200) process.exit(0); process.exit(1);})"
 
+# Run the Next.js server from the standalone directory
+# The standalone output contains everything needed
+ENTRYPOINT []
 CMD ["node", "server.js"]

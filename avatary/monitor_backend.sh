@@ -9,7 +9,7 @@ echo "Configuration:"
 grep -E "^TAVUS_API_KEY|^AVATAR_PROVIDER|^LIVEKIT_URL" .env
 echo ""
 echo "To see live activity, run in another terminal:"
-echo "  cd /var/www/avatar\ /avatary"
+echo "  cd /var/www/avatar/avatary"
 echo "  python3 agent.py dev"
 echo ""
 echo "Press Ctrl+C to stop"

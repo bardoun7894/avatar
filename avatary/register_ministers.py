@@ -28,7 +28,7 @@ def clean_filename(filename: str) -> str:
 
     return name
 
-def register_ministers_from_directory(directory: str = "/var/www/avatar /public/images/ministers"):
+def register_ministers_from_directory(directory: str = "/var/www/avatar/public/images/ministers"):
     """
     Register all ministers from the images directory
     """

@@ -7,16 +7,18 @@ Handles the flow of calls through the IVR system and routes to appropriate depar
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
-from .models import (
+
+# Use absolute imports - Docker runs with all files in /app
+from models import (
     IVRStage,
     Department,
     IVRStageResponse,
     RoutingDecision,
     Call,
 )
-from .rules_engine import get_rules_engine
-from .config import get_prompts
-from .prompts.routing_prompts import (
+from rules_engine import get_rules_engine
+from config import get_prompts
+from prompts.routing_prompts import (
     ReceptionPrompts,
     SalesPrompts,
     ComplaintsPrompts,

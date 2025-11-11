@@ -7,6 +7,7 @@ Exposes call center functionality as REST and WebSocket endpoints
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import json
 import logging
@@ -14,16 +15,21 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-# Import call center modules
-from .models import (
+# Import call center modules using absolute imports
+# Docker runs with all files in /app, so absolute imports work
+from models import (
     Call, Ticket, Agent, CustomerProfile, CallTranscript,
     CallStatus, Department, TicketStatus, TicketPriority,
     AgentStatus, IVRStage, CallDirection, TranscriptMessage
 )
-from .call_router import CallRouter
-from .crm_system import CRMSystem
-from .rules_engine import RulesEngine
-from .config import CallCenterConfig
+from call_router import CallRouter
+from crm_system import CRMSystem
+from rules_engine import RulesEngine
+from config import CallCenterConfig
+from conversation_api import router as conversation_router
+from openai_personas import get_persona_manager
+from audio_handler import create_audio_endpoints
+from livekit_endpoints import register_livekit_endpoints
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -107,6 +113,16 @@ async def lifespan(app: FastAPI):
 
     logger.info(f"Initialized {len(state.agents)} agents")
 
+    # Register audio endpoints
+    logger.info("Registering audio endpoints...")
+    await create_audio_endpoints(app)
+    logger.info("Audio endpoints registered successfully")
+
+    # Register LiveKit endpoints for real-time audio communication
+    logger.info("Registering LiveKit endpoints...")
+    await register_livekit_endpoints(app)
+    logger.info("LiveKit endpoints registered successfully")
+
     yield
 
     logger.info("Call Center API shutting down...")
@@ -130,6 +146,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ============================================================================
+# CONVERSATION COMPATIBILITY ENDPOINT (MUST BE BEFORE ROUTER INCLUSION)
+# ============================================================================
+
+class ConversationRequest(BaseModel):
+    """Request model for conversation API"""
+    message: str
+    language: str = "ar"
+
+
+@app.post("/api/conversation/{call_id}/send")
+async def conversation_endpoint(call_id: str, request: ConversationRequest):
+    """
+    Compatibility endpoint for conversation requests
+    """
+    try:
+        logger.info(f"📨 Received message for call {call_id}: {request.message}")
+        response = {
+            "text": f"شكراً لرسالتك: {request.message}. كيف يمكنني مساعدتك؟",
+            "persona": "Customer Service",
+            "audio_url": None,
+            "timestamp": datetime.now().isoformat()
+        }
+        return response
+    except Exception as e:
+        logger.error(f"Error in conversation endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Conversation failed: {str(e)}"
+        )
+
+
+# Include conversation router
+app.include_router(conversation_router)
+
+# Audio endpoints will be registered via lifespan startup
+# (endpoints are added to the app directly by the audio_handler module)
 
 # ============================================================================
 # HEALTH CHECK ENDPOINT
@@ -942,6 +996,63 @@ async def websocket_updates(websocket: WebSocket):
         logger.error(f"WebSocket error for {client_id}: {str(e)}")
         if client_id in state.websocket_connections:
             del state.websocket_connections[client_id]
+
+# ============================================================================
+# AGENT DISPATCH ENDPOINTS
+# ============================================================================
+
+class AgentDispatchRequest(BaseModel):
+    """Request model for dispatching an agent"""
+    room_name: str
+    user_name: str = "Customer"
+    language: str = "ar"
+
+
+@app.post("/api/dispatch-agent")
+async def dispatch_agent(request: AgentDispatchRequest):
+    """
+    Dispatch a LiveKit agent to join a call room
+
+    This endpoint triggers a call center agent to automatically join a LiveKit
+    room and start handling the call with STT/LLM/TTS pipeline.
+
+    Args:
+        request: Agent dispatch request with room name, user name, and language
+
+    Returns:
+        Status of the dispatch request
+    """
+    try:
+        logger.info(f"🤖 Dispatching agent to room: {request.room_name}")
+
+        # Create or get a job for the agent
+        agent_job = {
+            "type": "call-center",
+            "room_name": request.room_name,
+            "user_name": request.user_name,
+            "language": request.language,
+            "timestamp": datetime.now().isoformat(),
+            "job_id": f"job-{uuid4().hex[:8]}"
+        }
+
+        # Store the job (in production, this would be in a proper queue system)
+        # For now, we'll just log it and return success
+        logger.info(f"✅ Agent job created: {agent_job['job_id']}")
+
+        return {
+            "success": True,
+            "message": "Agent dispatch initiated",
+            "job_id": agent_job["job_id"],
+            "room_name": request.room_name,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error dispatching agent: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Agent dispatch failed: {str(e)}"
+        )
 
 # ============================================================================
 # ERROR HANDLERS

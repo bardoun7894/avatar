@@ -1,88 +1,15 @@
 
-> ornina-avatar-frontend@1.0.0 dev
-> next dev -p 3000
+> ornina-avatar-frontend@1.0.0 start
+> next start -p 3000
 
   ▲ Next.js 14.2.33
   - Local:        http://localhost:3000
-  - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1632ms
- ○ Compiling / ...
- ✓ Compiled / in 2.8s (332 modules)
- ✓ Compiled in 207ms (332 modules)
- GET / 200 in 3168ms
- ○ Compiling /call ...
- ✓ Compiled /call in 1049ms (351 modules)
- ✓ Compiled /_error in 111ms (353 modules)
- GET /.well-known/appspecific/com.chrome.devtools.json 404 in 160ms
- ✓ Compiled /api/token in 127ms (142 modules)
- POST /api/token 200 in 269ms
- GET / 200 in 84ms
- GET / 200 in 12ms
- ✓ Compiled in 386ms (351 modules)
- ✓ Compiled in 217ms (351 modules)
- ✓ Compiled in 370ms (351 modules)
- ✓ Compiled in 225ms (351 modules)
- ⨯ ./pages/index.tsx:4:1
-Module not found: Can't resolve 'framer-motion'
-[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
-[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
-[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
-[0m [90m   |[39m [31m[1m^[22m[39m[0m
-[0m [90m 5 |[39m[0m
-[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
-[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
-
-https://nextjs.org/docs/messages/module-not-found
- ⨯ ./pages/index.tsx:4:1
-Module not found: Can't resolve 'framer-motion'
-[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
-[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
-[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
-[0m [90m   |[39m [31m[1m^[22m[39m[0m
-[0m [90m 5 |[39m[0m
-[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
-[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
-
-https://nextjs.org/docs/messages/module-not-found
- ⨯ ./pages/index.tsx:4:1
-Module not found: Can't resolve 'framer-motion'
-[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
-[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
-[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
-[0m [90m   |[39m [31m[1m^[22m[39m[0m
-[0m [90m 5 |[39m[0m
-[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
-[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
-
-https://nextjs.org/docs/messages/module-not-found
- GET / 500 in 1726ms
- ○ Compiling /_error ...
- GET / 500 in 50ms
- ⨯ ./pages/index.tsx:4:1
-Module not found: Can't resolve 'framer-motion'
-[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
-[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
-[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
-[0m [90m   |[39m [31m[1m^[22m[39m[0m
-[0m [90m 5 |[39m[0m
-[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
-[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
-
-https://nextjs.org/docs/messages/module-not-found
- GET / 500 in 9ms
- GET / 500 in 27ms
- GET / 500 in 13ms
- ⨯ ./pages/index.tsx:4:1
-Module not found: Can't resolve 'framer-motion'
-[0m [90m 2 |[39m [36mimport[39m { useState } [36mfrom[39m [32m'react'[39m[0m
-[0m [90m 3 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'next/router'[39m[0m
-[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { motion } [36mfrom[39m [32m'framer-motion'[39m[0m
-[0m [90m   |[39m [31m[1m^[22m[39m[0m
-[0m [90m 5 |[39m[0m
-[0m [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mHome[39m() {[0m
-[0m [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[0m
-
-https://nextjs.org/docs/messages/module-not-found
-[?25h
+ ✓ Ready in 341ms
+🚀 Dispatching agent to room: ornina-1762634106927
+✅ Agent metadata updated, worker should pick up the job
+🚀 Dispatching agent to room: ornina-1762634474905
+✅ Agent metadata updated, worker should pick up the job
+🚀 Dispatching agent to room: ornina-1762634495207
+✅ Agent metadata updated, worker should pick up the job

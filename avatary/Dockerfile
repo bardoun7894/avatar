@@ -24,13 +24,12 @@ COPY . .
 # Create directory for logs
 RUN mkdir -p /app/logs
 
-# Environment variables (defaults, override with docker-compose)
+# Environment variables setup
+# These are sourced from docker-compose.yml or .env files
+# No defaults needed - values come from env_file and environment sections
 ENV PYTHONUNBUFFERED=1
-ENV LIVEKIT_URL=""
-ENV LIVEKIT_API_KEY=""
-ENV LIVEKIT_API_SECRET=""
 
-# Expose port (if we add health check endpoint)
+# Expose port
 EXPOSE 8080
 
 # Health check
@@ -38,4 +37,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD python -c "import sys; sys.exit(0)" || exit 1
 
 # Run the agent
+# All environment variables (LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, etc.)
+# are loaded from docker-compose.yml env_file and environment sections
 CMD ["python", "agent.py", "start"]

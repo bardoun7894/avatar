@@ -7,13 +7,15 @@ Overrides avatary agent behavior when in call center mode
 
 import logging
 from typing import Dict, Any, Optional, List
-from .config import (
+
+# Use absolute imports - Docker runs with all files in /app
+from config import (
     CALL_CENTER_RULES,
     AVATARY_OVERRIDES,
     get_rule,
     CALL_CENTER_ENABLED,
 )
-from .models import (
+from models import (
     Department,
     TicketPriority,
     IVRStage,

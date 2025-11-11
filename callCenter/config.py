@@ -429,6 +429,34 @@ FEATURES = {
 
 
 # ============================================================================
+# VOICE/TTS CONFIGURATION
+# ============================================================================
+
+# TTS Settings
+TTS_MODEL = os.getenv("TTS_MODEL", "tts-1")
+TTS_VOICE_DEFAULT = "nova"  # Best for Arabic and English
+
+# Voice mapping by language
+TTS_VOICE_MAP = {
+    "ar": "nova",      # Arabic
+    "en": "nova",      # English
+    "default": "nova"  # Fallback
+}
+
+# Audio output settings
+AUDIO_OUTPUT_FORMAT = "mp3"
+AUDIO_OUTPUT_SAMPLE_RATE = 24000
+
+# Fallback TTS if OpenAI fails
+FALLBACK_TTS_ENABLED = True
+FALLBACK_TTS_SERVICE = "elevenlabs"  # Using ElevenLabs as fallback
+
+# Voice activity detection
+VAD_ENABLED = True
+VAD_THRESHOLD = 0.5
+
+
+# ============================================================================
 # INTEGRATION SETTINGS
 # ============================================================================
 
@@ -506,6 +534,15 @@ __all__ = [
     "SUPABASE_KEY",
     "DB_TABLES",
     "FEATURES",
+    "TTS_MODEL",
+    "TTS_VOICE_DEFAULT",
+    "TTS_VOICE_MAP",
+    "AUDIO_OUTPUT_FORMAT",
+    "AUDIO_OUTPUT_SAMPLE_RATE",
+    "FALLBACK_TTS_ENABLED",
+    "FALLBACK_TTS_SERVICE",
+    "VAD_ENABLED",
+    "VAD_THRESHOLD",
     "get_prompts",
     "get_department_config",
     "get_rule",

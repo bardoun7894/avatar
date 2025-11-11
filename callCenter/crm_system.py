@@ -8,7 +8,9 @@ import logging
 import uuid
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from .models import (
+
+# Use absolute imports - Docker runs with all files in /app
+from models import (
     Ticket,
     TicketStatus,
     TicketPriority,
@@ -16,8 +18,8 @@ from .models import (
     CustomerProfile,
     Call,
 )
-from .rules_engine import get_rules_engine
-from .config import SUPABASE_URL, SUPABASE_KEY
+from rules_engine import get_rules_engine
+from config import SUPABASE_URL, SUPABASE_KEY
 
 logger = logging.getLogger(__name__)
 

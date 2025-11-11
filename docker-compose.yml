@@ -1,5 +1,8 @@
 version: '3.8'
 
+# Load environment variables from .env file in this directory
+# This enables ${VAR_NAME} substitution in the services section below
+
 services:
   # Avatar Backend (Python + LiveKit Agents)
   backend:
@@ -13,6 +16,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=INFO
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
     volumes:
       # Mount code for development (comment out for production)
       - ./avatary:/app
@@ -38,16 +44,23 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_LIVEKIT_URL=${LIVEKIT_URL}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL=${NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL}
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     container_name: avatar-frontend
     restart: unless-stopped
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_LIVEKIT_URL=${LIVEKIT_URL}
-    volumes:
-      # Mount for development (comment out for production)
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL=${NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     ports:
       - "3000:3000"
     networks:
@@ -56,6 +69,42 @@ services:
       - backend
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {if (r.statusCode == 200) process.exit(0); process.exit(1);})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Call Center Backend (FastAPI)
+  callcenter:
+    build:
+      context: ./callCenter
+      dockerfile: Dockerfile
+    container_name: avatar-callcenter
+    restart: unless-stopped
+    env_file:
+      - ./callCenter/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      # Mount code for development (comment out for production)
+      # - ./callCenter:/app
+      # Persist logs
+      - ./callCenter/logs:/app/logs
+      # Don't overwrite venv in container
+      # - /app/venv
+    ports:
+      - "8000:8000"
+    networks:
+      - avatar-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
