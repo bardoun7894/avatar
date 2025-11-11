@@ -420,54 +420,346 @@ class CRMSystem:
     # ========================================================================
 
     async def _insert_customer_in_db(self, customer: CustomerProfile) -> bool:
-        """Insert customer into database"""
-        # This would connect to Supabase
-        # For now, using mock storage
-        return True
+        """Insert customer into Supabase database"""
+        if not self.supabase:
+            return False
+
+        try:
+            data = {
+                "customer_id": customer.customer_id,
+                "name": customer.name,
+                "phone": customer.phone,
+                "email": customer.email,
+                "tier": customer.tier,
+                "vip": customer.vip,
+                "created_at": customer.created_at.isoformat() if customer.created_at else None,
+                "updated_at": customer.updated_at.isoformat() if customer.updated_at else None,
+                "last_interaction": customer.last_interaction.isoformat() if customer.last_interaction else None,
+                "total_calls": customer.total_calls,
+                "total_tickets": customer.total_tickets
+            }
+
+            response = self.supabase.table("customers").insert(data).execute()
+            logger.info(f"✅ Customer inserted: {customer.phone}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to insert customer to Supabase: {e}")
+            return False
 
     async def _update_customer_in_db(self, customer: CustomerProfile) -> bool:
-        """Update customer in database"""
-        return True
+        """Update customer in Supabase database"""
+        if not self.supabase:
+            return False
+
+        try:
+            data = {
+                "name": customer.name,
+                "phone": customer.phone,
+                "email": customer.email,
+                "tier": customer.tier,
+                "vip": customer.vip,
+                "updated_at": customer.updated_at.isoformat() if customer.updated_at else None,
+                "last_interaction": customer.last_interaction.isoformat() if customer.last_interaction else None,
+                "total_calls": customer.total_calls,
+                "total_tickets": customer.total_tickets
+            }
+
+            response = self.supabase.table("customers").update(data).eq(
+                "customer_id", customer.customer_id
+            ).execute()
+
+            logger.info(f"✅ Customer updated: {customer.phone}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to update customer in Supabase: {e}")
+            return False
 
     async def _query_customer_from_db(self, phone: str) -> Optional[CustomerProfile]:
-        """Query customer from database by phone"""
-        return None
+        """Query customer from Supabase by phone number"""
+        if not self.supabase:
+            return None
+
+        try:
+            response = self.supabase.table("customers").select("*").eq(
+                "phone", phone
+            ).execute()
+
+            if response.data and len(response.data) > 0:
+                row = response.data[0]
+                customer = CustomerProfile(
+                    customer_id=row["customer_id"],
+                    name=row["name"],
+                    phone=row["phone"],
+                    email=row.get("email"),
+                    tier=row.get("tier", "starter"),
+                    vip=row.get("vip", False),
+                    created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else None,
+                    updated_at=datetime.fromisoformat(row["updated_at"]) if row.get("updated_at") else None,
+                )
+                customer.last_interaction = datetime.fromisoformat(row["last_interaction"]) if row.get("last_interaction") else None
+                customer.total_calls = row.get("total_calls", 0)
+                customer.total_tickets = row.get("total_tickets", 0)
+
+                logger.info(f"✅ Retrieved customer from DB: {phone}")
+                return customer
+
+            return None
+
+        except Exception as e:
+            logger.error(f"❌ Failed to query customer from Supabase: {e}")
+            return None
 
     async def _query_customer_by_id_from_db(
         self, customer_id: str
     ) -> Optional[CustomerProfile]:
-        """Query customer from database by ID"""
-        return None
+        """Query customer from Supabase by ID"""
+        if not self.supabase:
+            return None
+
+        try:
+            response = self.supabase.table("customers").select("*").eq(
+                "customer_id", customer_id
+            ).execute()
+
+            if response.data and len(response.data) > 0:
+                row = response.data[0]
+                customer = CustomerProfile(
+                    customer_id=row["customer_id"],
+                    name=row["name"],
+                    phone=row["phone"],
+                    email=row.get("email"),
+                    tier=row.get("tier", "starter"),
+                    vip=row.get("vip", False),
+                    created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else None,
+                    updated_at=datetime.fromisoformat(row["updated_at"]) if row.get("updated_at") else None,
+                )
+                customer.last_interaction = datetime.fromisoformat(row["last_interaction"]) if row.get("last_interaction") else None
+                customer.total_calls = row.get("total_calls", 0)
+                customer.total_tickets = row.get("total_tickets", 0)
+
+                logger.info(f"✅ Retrieved customer from DB by ID: {customer_id}")
+                return customer
+
+            return None
+
+        except Exception as e:
+            logger.error(f"❌ Failed to query customer from Supabase: {e}")
+            return None
 
     async def _insert_ticket_in_db(self, ticket: Ticket) -> bool:
-        """Insert ticket into database"""
-        return True
+        """Insert ticket into Supabase database"""
+        if not self.supabase:
+            return False
+
+        try:
+            data = {
+                "ticket_id": ticket.ticket_id,
+                "customer_phone": ticket.customer_phone,
+                "customer_name": ticket.customer_name,
+                "customer_email": ticket.customer_email,
+                "subject": ticket.subject,
+                "description": ticket.description,
+                "department": ticket.department.value,
+                "priority": ticket.priority.value,
+                "status": ticket.status.value,
+                "call_id": ticket.call_id,
+                "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+                "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+            }
+
+            response = self.supabase.table("tickets").insert(data).execute()
+            logger.info(f"✅ Ticket inserted: {ticket.ticket_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to insert ticket to Supabase: {e}")
+            return False
 
     async def _update_ticket_in_db(self, ticket: Ticket) -> bool:
-        """Update ticket in database"""
-        return True
+        """Update ticket in Supabase database"""
+        if not self.supabase:
+            return False
+
+        try:
+            data = {
+                "subject": ticket.subject,
+                "description": ticket.description,
+                "department": ticket.department.value,
+                "priority": ticket.priority.value,
+                "status": ticket.status.value,
+                "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+            }
+
+            response = self.supabase.table("tickets").update(data).eq(
+                "ticket_id", ticket.ticket_id
+            ).execute()
+
+            logger.info(f"✅ Ticket updated: {ticket.ticket_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to update ticket in Supabase: {e}")
+            return False
 
     async def _query_ticket_from_db(self, ticket_id: str) -> Optional[Ticket]:
-        """Query ticket from database"""
-        return None
+        """Query ticket from Supabase by ID"""
+        if not self.supabase:
+            return None
+
+        try:
+            response = self.supabase.table("tickets").select("*").eq(
+                "ticket_id", ticket_id
+            ).execute()
+
+            if response.data and len(response.data) > 0:
+                row = response.data[0]
+                ticket = Ticket(
+                    ticket_id=row["ticket_id"],
+                    customer_phone=row["customer_phone"],
+                    customer_name=row["customer_name"],
+                    customer_email=row.get("customer_email"),
+                    subject=row["subject"],
+                    description=row["description"],
+                    department=Department(row["department"]),
+                    priority=TicketPriority(row["priority"]),
+                    status=TicketStatus(row["status"]),
+                    call_id=row.get("call_id"),
+                    created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else None,
+                    updated_at=datetime.fromisoformat(row["updated_at"]) if row.get("updated_at") else None,
+                )
+
+                logger.info(f"✅ Retrieved ticket from DB: {ticket_id}")
+                return ticket
+
+            return None
+
+        except Exception as e:
+            logger.error(f"❌ Failed to query ticket from Supabase: {e}")
+            return None
 
     async def _query_tickets_by_customer_from_db(
         self, customer_phone: str
     ) -> List[Ticket]:
-        """Query tickets by customer phone"""
-        return []
+        """Query tickets from Supabase by customer phone"""
+        if not self.supabase:
+            return []
+
+        try:
+            response = self.supabase.table("tickets").select("*").eq(
+                "customer_phone", customer_phone
+            ).execute()
+
+            tickets = []
+            if response.data:
+                for row in response.data:
+                    ticket = Ticket(
+                        ticket_id=row["ticket_id"],
+                        customer_phone=row["customer_phone"],
+                        customer_name=row["customer_name"],
+                        customer_email=row.get("customer_email"),
+                        subject=row["subject"],
+                        description=row["description"],
+                        department=Department(row["department"]),
+                        priority=TicketPriority(row["priority"]),
+                        status=TicketStatus(row["status"]),
+                        call_id=row.get("call_id"),
+                        created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else None,
+                        updated_at=datetime.fromisoformat(row["updated_at"]) if row.get("updated_at") else None,
+                    )
+                    tickets.append(ticket)
+
+            logger.info(f"✅ Retrieved {len(tickets)} tickets for {customer_phone}")
+            return tickets
+
+        except Exception as e:
+            logger.error(f"❌ Failed to query tickets from Supabase: {e}")
+            return []
 
     async def _query_open_tickets_from_db(
         self, department: Optional[Department] = None
     ) -> List[Ticket]:
-        """Query open tickets from database"""
-        return []
+        """Query open tickets from Supabase"""
+        if not self.supabase:
+            return []
+
+        try:
+            query = self.supabase.table("tickets").select("*").eq("status", TicketStatus.OPEN.value)
+
+            if department:
+                query = query.eq("department", department.value)
+
+            response = query.execute()
+
+            tickets = []
+            if response.data:
+                for row in response.data:
+                    ticket = Ticket(
+                        ticket_id=row["ticket_id"],
+                        customer_phone=row["customer_phone"],
+                        customer_name=row["customer_name"],
+                        customer_email=row.get("customer_email"),
+                        subject=row["subject"],
+                        description=row["description"],
+                        department=Department(row["department"]),
+                        priority=TicketPriority(row["priority"]),
+                        status=TicketStatus(row["status"]),
+                        call_id=row.get("call_id"),
+                        created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else None,
+                        updated_at=datetime.fromisoformat(row["updated_at"]) if row.get("updated_at") else None,
+                    )
+                    tickets.append(ticket)
+
+            logger.info(f"✅ Retrieved {len(tickets)} open tickets")
+            return tickets
+
+        except Exception as e:
+            logger.error(f"❌ Failed to query open tickets from Supabase: {e}")
+            return []
 
     async def _query_unassigned_tickets_from_db(
         self, department: Optional[Department] = None
     ) -> List[Ticket]:
-        """Query unassigned tickets from database"""
-        return []
+        """Query unassigned tickets from Supabase"""
+        if not self.supabase:
+            return []
+
+        try:
+            query = self.supabase.table("tickets").select("*").eq(
+                "status", TicketStatus.UNASSIGNED.value
+            )
+
+            if department:
+                query = query.eq("department", department.value)
+
+            response = query.execute()
+
+            tickets = []
+            if response.data:
+                for row in response.data:
+                    ticket = Ticket(
+                        ticket_id=row["ticket_id"],
+                        customer_phone=row["customer_phone"],
+                        customer_name=row["customer_name"],
+                        customer_email=row.get("customer_email"),
+                        subject=row["subject"],
+                        description=row["description"],
+                        department=Department(row["department"]),
+                        priority=TicketPriority(row["priority"]),
+                        status=TicketStatus(row["status"]),
+                        call_id=row.get("call_id"),
+                        created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else None,
+                        updated_at=datetime.fromisoformat(row["updated_at"]) if row.get("updated_at") else None,
+                    )
+                    tickets.append(ticket)
+
+            logger.info(f"✅ Retrieved {len(tickets)} unassigned tickets")
+            return tickets
+
+        except Exception as e:
+            logger.error(f"❌ Failed to query unassigned tickets from Supabase: {e}")
+            return []
 
     async def _log_ticket_change(
         self,
@@ -477,8 +769,27 @@ class CRMSystem:
         changed_by: str,
         reason: Optional[str] = None,
     ) -> bool:
-        """Log ticket status change to history"""
-        return True
+        """Log ticket status change to Supabase"""
+        if not self.supabase:
+            return False
+
+        try:
+            data = {
+                "ticket_id": ticket_id,
+                "old_status": old_status.value,
+                "new_status": new_status.value,
+                "changed_by": changed_by,
+                "reason": reason,
+                "changed_at": datetime.utcnow().isoformat()
+            }
+
+            response = self.supabase.table("ticket_history").insert(data).execute()
+            logger.info(f"✅ Logged status change for ticket {ticket_id}: {old_status.value} → {new_status.value}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to log ticket change: {e}")
+            return False
 
 
 # ============================================================================

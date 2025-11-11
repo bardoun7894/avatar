@@ -12,7 +12,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from livekit import agents
-from livekit.agents import AgentSession, ChatMessage
+from livekit.agents import AgentSession, ChatMessage, llm
 from livekit.plugins import openai, silero
 
 # Configure logging
@@ -71,12 +71,12 @@ async def entrypoint(ctx: AgentSession):
     logger.info(f"🔊 TTS available: {ctx.tts is not None}")
 
     # Initialize conversation with system prompt
-    ctx.chat_history.add_messages(
+    initial_messages = [
         ChatMessage(
             role="system",
             content=CALL_CENTER_SYSTEM_PROMPT,
         ),
-    )
+    ]
 
     # Send welcome message using TTS
     logger.info("🎙️ Sending welcome message...")
@@ -91,6 +91,8 @@ async def entrypoint(ctx: AgentSession):
 
     # Main conversation loop
     logger.info("🔄 Starting conversation loop...")
+    chat_messages = initial_messages.copy()
+
     try:
         while ctx.room.is_connected:
             # Wait for user speech using STT
@@ -104,24 +106,29 @@ async def entrypoint(ctx: AgentSession):
                     logger.info(f"👤 User: {user_input}")
 
                     # Add user message to chat history
-                    ctx.chat_history.add_user_message(user_input)
+                    chat_messages.append(ChatMessage(role="user", content=user_input))
 
                     # Get LLM response
                     logger.debug("🧠 Generating LLM response...")
-                    response = await ctx.llm.chat(chat_history=ctx.chat_history)
+                    try:
+                        response = await ctx.llm.chat(chat_history=chat_messages)
 
-                    if response and response.message:
-                        assistant_message = response.message.content
-                        logger.info(f"🤖 Agent: {assistant_message}")
+                        if response and response.message:
+                            assistant_message = response.message.content
+                            logger.info(f"🤖 Agent: {assistant_message}")
 
-                        # Add assistant response to chat history
-                        ctx.chat_history.add_assistant_message(assistant_message)
+                            # Add assistant response to chat history
+                            chat_messages.append(ChatMessage(role="assistant", content=assistant_message))
 
-                        # Speak the response using TTS
-                        logger.debug("🔊 Speaking response...")
-                        await ctx.say(assistant_message, allow_interruptions=True)
-                    else:
-                        logger.warning("⚠️  Empty response from LLM")
+                            # Speak the response using TTS
+                            logger.debug("🔊 Speaking response...")
+                            await ctx.say(assistant_message, allow_interruptions=True)
+                        else:
+                            logger.warning("⚠️  Empty response from LLM")
+                    except Exception as llm_error:
+                        logger.error(f"❌ LLM error: {llm_error}")
+                        fallback_msg = "معاف، حدث خطأ في معالجة طلبك. Sorry, I encountered an error processing your request."
+                        await ctx.say(fallback_msg)
                 else:
                     logger.debug("No user input detected, continuing...")
 
