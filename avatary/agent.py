@@ -539,6 +539,10 @@ async def entrypoint(ctx: agents.JobContext):
                                 user_type = "ceo"
                                 greeting = "السلام عليكم السيد رضوان نصار، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "CEO of Ornina Media: Radwan Nassar"
+                            elif "طارق مارديني" in match.user_name or "Tarik Mardini" in match.user_name:
+                                user_type = "operations_director"
+                                greeting = "السلام عليكم السيد طارق مارديني، أهلاً وسهلاً بك في شركة أورنينا"
+                                user_context = "Operations Director & Board Member: Tarik Mardini"
                             else:
                                 # Regular recognized person - simple greeting with name
                                 user_type = "recognized_guest"
