@@ -31,7 +31,10 @@ export default function Home() {
       <Head>
         <title>Ornina AI Avatar - Interactive Call Center</title>
         <meta name="description" content="Professional AI-powered call center with video avatars" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </Head>
 
       <div className="relative flex min-h-screen flex-col items-center justify-center bg-gray-900 overflow-hidden">
@@ -121,7 +124,7 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 1 }}
             >
-              انضم للمحادثة
+               
             </motion.h2>
 
             <form onSubmit={handleJoinCall} className="space-y-4">
@@ -177,19 +180,6 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 1.2 }}
             >
-              <motion.p 
-                className="mb-1"
-                whileHover={{ color: "#ffffff" }}
-                transition={{ duration: 0.2 }}
-              >
-                اتصل بنا: 3349028
-              </motion.p>
-              <motion.p 
-                whileHover={{ color: "#ffffff" }}
-                transition={{ duration: 0.2 }}
-              >
-                دمشق - المزرعة - مقابل وزارة التربية
-              </motion.p>
             </motion.div>
           </motion.div>
 

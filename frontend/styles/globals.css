@@ -77,3 +77,145 @@ a {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
+
+/* Glassmorphism animations */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.5s ease-out;
+}
+
+/* Enhanced backdrop blur support */
+@supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+
+  .backdrop-blur-sm {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+}
+
+/* Portrait orientation responsive styles */
+@media (orientation: portrait) {
+  /* Adjust video container for portrait - full screen without bars */
+  .video-container {
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* Ensure video fills entire viewport */
+  video {
+    object-fit: cover !important;
+    background-color: #000;
+  }
+
+  /* Stack UI elements with glass effect preserved */
+  .control-bar {
+    width: calc(100% - 2rem);
+    bottom: env(safe-area-inset-bottom, 20px);
+    left: 1rem;
+    right: 1rem;
+  }
+
+  /* Chat panel adjustments for portrait */
+  .chat-panel {
+    max-width: 100%;
+    margin: 0 1rem;
+  }
+}
+
+/* Tall screens (event displays, digital signage, long portrait) */
+@media (min-aspect-ratio: 9/16) and (orientation: portrait) {
+  .chat-panel {
+    max-height: 50vh;
+    width: calc(100% - 2rem);
+  }
+
+  .video-container video {
+    object-fit: cover !important;
+    background-color: #000;
+  }
+
+  /* Adjust glass morphism for tall screens */
+  .glass-panel {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+/* Wide landscape screens */
+@media (min-aspect-ratio: 16/9) and (orientation: landscape) {
+  .video-container video {
+    object-fit: cover;
+  }
+
+  .control-bar {
+    max-width: 600px;
+  }
+}
+
+/* Safe area for notched devices (iPhone, etc) */
+.safe-area-padding {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Small mobile devices */
+@media (max-width: 375px) {
+  .control-button {
+    padding: 0.5rem;
+  }
+
+  .chat-message {
+    font-size: 0.875rem;
+  }
+}
+
+/* Tablet portrait */
+@media (min-width: 768px) and (orientation: portrait) {
+  .chat-panel {
+    max-width: 500px;
+  }
+
+  .control-bar {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+}
+
+/* Enhanced glass morphism for different screen densities */
+@media (min-resolution: 2dppx) {
+  .glass-effect {
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+  }
+}

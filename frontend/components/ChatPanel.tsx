@@ -41,14 +41,14 @@ export default function ChatPanel({ messages, messageInput, setMessageInput, onS
   }
 
   return (
-    <div className="absolute bottom-8 left-6 z-10 max-w-sm w-full md:w-80">
+    <div className="fixed z-10 portrait:bottom-20 portrait:left-4 portrait:right-4 portrait:max-w-none landscape:bottom-8 landscape:left-6 landscape:max-w-sm landscape:w-80 tall:bottom-24 tall:left-4 tall:right-4 transition-all duration-300">
       <style>{`
         @keyframes typing-cursor {
           0%, 49% { opacity: 1; }
           50%, 100% { opacity: 0; }
         }
       `}</style>
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/20 bg-black/20 p-4 backdrop-blur-lg shadow-2xl max-h-[260px]">
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/20 bg-black/20 p-4 backdrop-blur-lg shadow-2xl portrait:max-h-[40vh] landscape:max-h-[260px] tall:max-h-[50vh]">
         {/* Messages container */}
         <div className="flex h-full flex-col gap-3 overflow-y-auto pr-2 flex-1">
           {messages.map((message) => (

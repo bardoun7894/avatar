@@ -15,8 +15,9 @@ export default async function handler(
     return res.status(400).json({ error: 'Missing roomName or identity' })
   }
 
-  const apiKey = process.env.LIVEKIT_API_KEY
-  const apiSecret = process.env.LIVEKIT_API_SECRET
+  // Use environment variables or fallback to hardcoded values for production
+  const apiKey = process.env.LIVEKIT_API_KEY || 'APIJL8zayDiwTwV'
+  const apiSecret = process.env.LIVEKIT_API_SECRET || 'fYtfW6HKKiaqxAcEhmRR4OTjZcyJbfWov4Bi9ezUvfFA'
 
   if (!apiKey || !apiSecret) {
     return res.status(500).json({ error: 'LiveKit credentials not configured' })
@@ -37,7 +38,11 @@ export default async function handler(
     })
 
     const token = await at.toJwt()
-    return res.status(200).json({ token })
+    const livekitUrl = process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://tavus-agent-project-i82x78jc.livekit.cloud'
+    return res.status(200).json({ 
+      token,
+      livekit_url: livekitUrl 
+    })
   } catch (error: any) {
     console.error('Token generation error:', error)
     return res.status(500).json({ error: 'Failed to generate token' })

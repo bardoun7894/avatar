@@ -6,8 +6,8 @@ interface CallInfoProps {
 
 export default function CallInfo({ roomName, duration, isRecording }: CallInfoProps) {
   return (
-    <div className="absolute top-6 left-6 z-10">
-      <div className="flex items-center gap-4 py-2 px-4 bg-black/20 backdrop-blur-lg rounded-full border border-white/10 shadow-lg text-sm text-white">
+    <div className="fixed z-10 portrait:top-4 portrait:left-4 landscape:top-6 landscape:left-6 transition-all duration-300">
+      <div className="flex items-center gap-2 sm:gap-4 py-1.5 sm:py-2 px-3 sm:px-4 bg-black/20 backdrop-blur-lg rounded-full border border-white/10 shadow-lg text-xs sm:text-sm text-white">
         {/* Room name */}
         <h1 className="font-semibold">Ornina Call</h1>
 

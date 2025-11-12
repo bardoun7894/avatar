@@ -48,6 +48,7 @@ export default function ChatPanel({ messages, messageInput, setMessageInput, onS
           50%, 100% { opacity: 0; }
         }
       `}</style>
+      <video autoplay="" playsinline="" class="absolute inset-0 w-full h-full object-cover z-10"></video>
       <div className="flex flex-col gap-3 rounded-2xl border border-white/20 bg-black/20 p-4 backdrop-blur-lg shadow-2xl max-h-[260px]">
         {/* Messages container */}
         <div className="flex h-full flex-col gap-3 overflow-y-auto pr-2 flex-1">

@@ -20,6 +20,7 @@ import logging
 import re
 import asyncio
 import time
+from datetime import datetime
 from prompts import AGENT_INSTRUCTIONS
 from local_mcp_server import get_local_tools, call_tool
 from conversation_logger import ConversationLogger
@@ -481,9 +482,9 @@ async def entrypoint(ctx: agents.JobContext):
         vision_task = None
         greeted_people = set()  # Track who we've already greeted in this session
         greeting_flags = {
-            "initial_greeting_sent": False,  # ONE greeting per entire session
+            "initial_greeting_sent": True,  # ONE greeting per entire session
             "greeting_lock": False,
-            "first_visual_time": None,  # Track when first visual update arrived
+            "first_visual_time": datetime.now(),  # Track when first visual update arrived
             "session_identity": ctx.room.name or f"session-{os.urandom(4).hex()}"  # Unique session ID
         }
 
@@ -523,15 +524,15 @@ async def entrypoint(ctx: agents.JobContext):
                             user_context = ""
 
                             # Check for specific VIPs - use formal titles
-                            if "Abd Salam Haykal" in match.user_name or "عبد السلام حيقل" in match.user_name:
+                            if "Abd Salam Haykal" in match.user_name or "عبد السلام هيكل" in match.user_name:
                                 user_type = "minister"
-                                greeting = "السلام عليكم سيدي الوزير عبد السلام حيقل، أهلاً وسهلاً بك في شركة أورنينا"
+                                greeting = "السلام عليكم سيدي الوزير عبد السلام هيكل، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "Government Minister: Abd Salam Haykal"
                             elif "Asaad Chaibani" in match.user_name or "أسعد شيباني" in match.user_name:
                                 user_type = "minister"
                                 greeting = "السلام عليكم سيدي الوزير أسعد شيباني، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "Government Minister: Asaad Chaibani"
-                            elif "Mohamed Bardouni" in match.user_name or "Bardouni" in match.user_name:
+                            elif "Mohamed Bardouni" in match.user_name or "محمد البردوني" in match.user_name:
                                 user_type = "developer"
                                 greeting = "السلام عليكم سيدي محمد، أهلاً وسهلاً بك في شركة أورنينا"
                                 user_context = "Developer: Mohamed Bardouni"

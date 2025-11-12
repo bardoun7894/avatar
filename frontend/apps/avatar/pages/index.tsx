@@ -121,7 +121,7 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 1 }}
             >
-              انضم للمحادثة
+               
             </motion.h2>
 
             <form onSubmit={handleJoinCall} className="space-y-4">
@@ -177,19 +177,6 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 1.2 }}
             >
-              <motion.p 
-                className="mb-1"
-                whileHover={{ color: "#ffffff" }}
-                transition={{ duration: 0.2 }}
-              >
-                اتصل بنا: 3349028
-              </motion.p>
-              <motion.p 
-                whileHover={{ color: "#ffffff" }}
-                transition={{ duration: 0.2 }}
-              >
-                دمشق - المزرعة - مقابل وزارة التربية
-              </motion.p>
             </motion.div>
           </motion.div>
 

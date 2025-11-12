@@ -67,22 +67,22 @@ export default function ControlBar({
   onEndCall,
 }: ControlBarProps) {
   return (
-    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
-      <div className="flex items-center justify-center gap-3 px-4 py-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl">
+    <div className="fixed z-20 portrait:bottom-4 portrait:left-4 portrait:right-4 landscape:bottom-8 landscape:left-1/2 landscape:-translate-x-1/2 tall:bottom-6 tall:left-4 tall:right-4 transition-all duration-300">
+      <div className="flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl portrait:mx-auto portrait:w-fit landscape:w-fit">
         {/* Microphone button */}
         <button
           onClick={onToggleMute}
           aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-          className={`p-3 rounded-full text-white transition-all duration-200 ${
+          className={`p-2 sm:p-3 rounded-full text-white transition-all duration-200 ${
             isMuted
               ? 'bg-red-500/80 hover:bg-red-500'
               : 'bg-white/10 hover:bg-white/25'
           }`}
         >
           {isMuted ? (
-            <MicDisabledIcon width={24} height={24} />
+            <MicDisabledIcon width={20} height={20} className="sm:w-6 sm:h-6" />
           ) : (
-            <MicIcon width={24} height={24} />
+            <MicIcon width={20} height={20} className="sm:w-6 sm:h-6" />
           )}
         </button>
 
@@ -90,16 +90,16 @@ export default function ControlBar({
         <button
           onClick={onToggleVideo}
           aria-label={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
-          className={`p-3 rounded-full text-white transition-all duration-200 ${
+          className={`p-2 sm:p-3 rounded-full text-white transition-all duration-200 ${
             isVideoOff
               ? 'bg-red-500/80 hover:bg-red-500'
               : 'bg-white/10 hover:bg-white/25'
           }`}
         >
           {isVideoOff ? (
-            <CameraDisabledIcon width={24} height={24} />
+            <CameraDisabledIcon width={20} height={20} className="sm:w-6 sm:h-6" />
           ) : (
-            <CameraIcon width={24} height={24} />
+            <CameraIcon width={20} height={20} className="sm:w-6 sm:h-6" />
           )}
         </button>
 
@@ -107,37 +107,37 @@ export default function ControlBar({
         <button
           onClick={onToggleChat}
           aria-label="Toggle chat"
-          className={`p-3 rounded-full text-white transition-all duration-200 ${
+          className={`p-2 sm:p-3 rounded-full text-white transition-all duration-200 ${
             isChatOpen
               ? 'bg-primary/20 ring-1 ring-primary/80'
               : 'bg-white/10 hover:bg-white/25'
           }`}
         >
-          <ChatIcon 
-            width={24} 
-            height={24} 
-            className={isChatOpen ? 'text-primary' : ''}
+          <ChatIcon
+            width={20}
+            height={20}
+            className={`${isChatOpen ? 'text-primary' : ''} sm:w-6 sm:h-6`}
           />
         </button>
 
         {/* Settings button */}
         <button
           aria-label="Settings"
-          className="p-3 bg-white/10 hover:bg-white/25 rounded-full text-white transition-all duration-200"
+          className="p-2 sm:p-3 bg-white/10 hover:bg-white/25 rounded-full text-white transition-all duration-200"
         >
-          <GearIcon width={24} height={24} />
+          <GearIcon width={20} height={20} className="sm:w-6 sm:h-6" />
         </button>
 
         {/* Divider */}
-        <div className="w-px h-8 bg-white/20 mx-2"></div>
+        <div className="w-px h-6 sm:h-8 bg-white/20 mx-1 sm:mx-2"></div>
 
         {/* End call button */}
         <button
           onClick={onEndCall}
           aria-label="End call"
-          className="p-3 bg-red-500/80 hover:bg-red-500 rounded-full text-white transition-all duration-200"
+          className="p-2 sm:p-3 bg-red-500/80 hover:bg-red-500 rounded-full text-white transition-all duration-200"
         >
-          <LeaveIcon width={24} height={24} />
+          <LeaveIcon width={20} height={20} className="sm:w-6 sm:h-6" />
         </button>
       </div>
     </div>

@@ -7,6 +7,13 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '375px',
+        'portrait': {'raw': '(orientation: portrait)'},
+        'landscape': {'raw': '(orientation: landscape)'},
+        'tall': {'raw': '(min-aspect-ratio: 9/16)'},  // For tall portrait screens like event displays
+        'wide': {'raw': '(min-aspect-ratio: 16/9)'},  // For wide landscape screens
+      },
       colors: {
         primary: '#0b73da',
         'background-light': '#f5f7f8',

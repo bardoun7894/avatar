@@ -5,6 +5,7 @@ import ChatPanel from './ChatPanel'
 import ControlBar from './ControlBar'
 import ParticipantThumbnail from './ParticipantThumbnail'
 import CallInfo from './CallInfo'
+import DeviceErrorBanner from './DeviceErrorBanner'
 
 interface VideoCallInterfaceProps {
   roomName: string
@@ -32,6 +33,7 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
   const [isConnecting, setIsConnecting] = useState(true)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [isAgentReady, setIsAgentReady] = useState(false)
+  const [deviceError, setDeviceError] = useState<string | null>(null)
 
   // LiveKit refs
   const roomRef = useRef<Room | null>(null)
@@ -135,8 +137,19 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
             }
 
             console.log('⏳ Waiting for AI agent to join...')
-          } catch (error) {
+          } catch (error: any) {
             console.error('❌ Failed to enable camera/microphone:', error)
+            const errorMsg = error.message || error.name || 'Unknown error'
+            setDeviceError(`${error.name}: ${errorMsg}`)
+            
+            // Show user-friendly error
+            if (error.name === 'NotReadableError') {
+              console.error('💡 Device is in use by another application')
+            } else if (error.name === 'NotAllowedError') {
+              console.error('💡 Permission denied - user needs to allow camera/microphone access')
+            } else if (error.name === 'NotFoundError') {
+              console.error('💡 No camera or microphone found')
+            }
           }
         })
 
@@ -448,10 +461,36 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
     setIsChatOpen(!isChatOpen)
   }
 
+  const handleRetryDevice = async () => {
+    setDeviceError(null)
+    if (roomRef.current) {
+      try {
+        console.log('🔄 Retrying camera/microphone access...')
+        await roomRef.current.localParticipant.enableCameraAndMicrophone()
+        
+        // Attach local video
+        const localVideoTrack = roomRef.current.localParticipant.videoTrackPublications.values().next().value?.videoTrack
+        if (localVideoTrack && localVideoRef.current) {
+          localVideoTrack.attach(localVideoRef.current)
+          console.log('✅ Local video attached after retry')
+        }
+      } catch (error: any) {
+        console.error('❌ Retry failed:', error)
+        setDeviceError(`${error.name}: ${error.message || 'Unknown error'}`)
+      }
+    }
+  }
+
   return (
     <div className="relative flex h-screen w-full flex-col items-center justify-center bg-gray-900 overflow-hidden">
-      {/* Main video feed - AI Avatar */}
-      <div className="absolute inset-0 z-0 h-full w-full">
+      {/* Device Error Banner */}
+      <DeviceErrorBanner
+        error={deviceError}
+        onRetry={handleRetryDevice}
+        onDismiss={() => setDeviceError(null)}
+      />
+      {/* Main video feed - AI Avatar - Full screen without bars */}
+      <div className="absolute inset-0 z-0 h-full w-full bg-black">
         <video
           ref={remoteVideoRef}
           autoPlay
