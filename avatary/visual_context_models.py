@@ -34,7 +34,7 @@ class VisualAnalysis(BaseModel):
         return self.age_seconds < 10
 
     def to_injection_text(self) -> str:
-        """Format for LLM context injection"""
+        """Format for LLM context injection with focus emphasis"""
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"""
 [SYSTEM - VISUAL CONTEXT]
@@ -43,11 +43,15 @@ class VisualAnalysis(BaseModel):
 أنت تستطيع رؤية المستخدم الآن من خلال الكاميرا!
 YOU CAN NOW SEE THE USER THROUGH THE CAMERA!
 
-ما تراه:
+👤 المستخدم الحالي (Current User):
 {self.content}
 
-⚠️ مهم جداً: استخدم ما تراه في ردك! اذكر للمستخدم أنك تراه!
-VERY IMPORTANT: Use what you see in your response! Tell the user you can see them!
+⚠️ ملاحظات مهمة جداً (CRITICAL Notes):
+- هذا الشخص هو من تتحدث معه مباشرة (THIS person is who you are directly talking to)
+- ركز عليه فقط واستجب لما يفعله (Focus ONLY on them and respond to what they're doing)
+- تجاهل أي نشاط أو أشخاص في الخلفية (IGNORE any background activity or other people)
+- استخدم ما تراه في ردك بشكل طبيعي (Use what you see naturally in your response)
+- لا تذكر أشخاص آخرين - فقط المستخدم الحالي (Don't mention others - ONLY current user)
 
 [END VISUAL CONTEXT]
 """

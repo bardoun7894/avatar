@@ -1,8 +1,8 @@
 version: '3.8'
 
-# Production Docker Compose Configuration
-# Deployment: https://184.174.37.148:3000/
-# All services are optimized for production
+# Development Docker Compose Configuration
+# For local testing and development
+# Usage: docker-compose -f docker-compose-build.yml up --build
 
 services:
   # Avatar Backend (Python + LiveKit Agents)
@@ -10,11 +10,11 @@ services:
     build:
       context: ./avatary
       dockerfile: Dockerfile
-    image: ornina-avatar-backend:latest
+    image: ornina-avatar-backend:dev
     container_name: avatar-backend
-    restart: always
+    restart: unless-stopped
     env_file:
-      - ./.env.production
+      - ./avatary/.env
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=INFO
@@ -22,6 +22,8 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
     volumes:
+      # Mount code for development (comment out for production)
+      - ./avatary:/app
       # Persist logs
       - ./avatary/logs:/app/logs
       # Don't overwrite venv in container
@@ -30,14 +32,14 @@ services:
       - "8080:8080"
     networks:
       - avatar-network
+    depends_on:
+      - redis
     healthcheck:
       test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    depends_on:
-      - redis
 
   # Avatar Frontend (Next.js)
   frontend:
@@ -50,11 +52,11 @@ services:
         - NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL=${NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL}
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-    image: ornina-avatar-frontend:latest
+    image: ornina-avatar-frontend:dev
     container_name: avatar-frontend
-    restart: always
+    restart: unless-stopped
     env_file:
-      - ./.env.production
+      - ./.env
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_LIVEKIT_URL=${LIVEKIT_URL}
@@ -62,12 +64,6 @@ services:
       - NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL=${NEXT_PUBLIC_CALLCENTER_LIVEKIT_URL}
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      # Server-side credentials for API routes (e.g., /api/dispatch-agent)
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - TAVUS_API_KEY=${TAVUS_API_KEY}
-      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
     ports:
       - "3000:3000"
     networks:
@@ -85,7 +81,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: avatar-redis
-    restart: always
+    restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data

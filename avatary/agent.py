@@ -124,7 +124,7 @@ async def entrypoint(ctx: agents.JobContext):
     elevenlabs_voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "G1QUjBCuRBbLbAmYlTgl")
 
     print(f"اللغة: العربية - Language: Arabic")
-    print(f"الصوت: OpenAI Alloy (ذكر) - Voice: OpenAI Alloy (Male - supports Arabic)")
+    print(f"الصوت: OpenAI Onyx (صوت ذكر عميق) - Voice: OpenAI Onyx (Deep Male Voice - supports Arabic)")
 
     # Get local tools
     local_tools = get_local_tools()
@@ -202,13 +202,13 @@ async def entrypoint(ctx: agents.JobContext):
     # Use OpenAI LLM
     session_config["llm"] = openai.LLM(model="gpt-4o-mini")
 
-    # Use OpenAI TTS (reliable and supports Arabic)
+    # Use OpenAI TTS with male voice (reliable and supports Arabic)
     print("\nاستخدام OpenAI TTS للصوت...")
     session_config["tts"] = openai.TTS(
-        voice="alloy",  # Supports Arabic well
+        voice="onyx",  # Deep male voice - consistent and supports Arabic
         speed=1.0
     )
-    print("✅ تم تكوين OpenAI TTS - OpenAI TTS configured!")
+    print("✅ تم تكوين OpenAI TTS - OpenAI TTS configured (voice: onyx - male)!")
 
     # Commented out ElevenLabs (having connection issues)
     # if ELEVENLABS_AVAILABLE and elevenlabs_api_key:
@@ -455,156 +455,157 @@ async def entrypoint(ctx: agents.JobContext):
         ctx.add_shutdown_callback(save_final_conversation)
         print("✅ Shutdown callback registered (professional system)")
 
-        workflow_analyzer.complete_step()
-        workflow_analyzer.start_step("Starting Avatar Session")
-
-        # Start the session
-        await session.start(
-            room=ctx.room,
-            agent=agent,
-            room_input_options=RoomInputOptions(
-                noise_cancellation=noise_cancellation.BVC(),
-            ),
-        )
-
-        workflow_analyzer.complete_step()
-
-        print("\n" + "="*60)
-        print("الوكيل الذكر جاهز! - MALE AGENT READY!")
-        print("="*60)
-        print("الاستماع للغة العربية - Listening for Arabic...")
-        print("يتحدث: OpenAI Alloy (ذكر) - Speaking: OpenAI Alloy (Male)")
-        print("قل: السلام عليكم - Say: Assalamu Alaikum")
-        print("="*60 + "\n")
-
-        # Initialize vision processor
+        # Initialize vision processor BEFORE session starts (for faster face detection)
+        print("\n🎥 Initializing vision processor early...")
         vision_processor = VisionProcessor()
         vision_task = None
         greeted_people = set()  # Track who we've already greeted in this session
+
+        # Preload InsightFace model to avoid lazy loading delay during first recognition
+        if FACE_RECOGNITION_ENABLED:
+            try:
+                print("🔄 Preloading InsightFace model for faster recognition...")
+                from insightface_recognition import face_recognizer as fr
+                # Trigger lazy loading now instead of during first call
+                fr._ensure_model_loaded()
+                print("✅ InsightFace model preloaded and ready!")
+            except Exception as e:
+                print(f"⚠️  InsightFace preload warning: {e}")
         greeting_flags = {
-            "initial_greeting_sent": True,  # ONE greeting per entire session
-            "greeting_lock": False,
-            "first_visual_time": datetime.now(),  # Track when first visual update arrived
+            "initial_greeting_sent": False,  # ONE greeting per entire session - starts False (not sent yet)
+            "greeting_lock": asyncio.Lock(),  # Async lock to prevent race conditions
+            "first_visual_time": None,  # Track when first visual update arrived (None until first frame)
             "session_identity": ctx.room.name or f"session-{os.urandom(4).hex()}"  # Unique session ID
         }
+        print("✅ Vision processor ready - will start on first video track")
 
+        # Define handle_visual_update BEFORE starting session
         async def handle_visual_update(analysis: str, frame_bytes: bytes = None):
             """
             Handle visual analysis updates with face recognition
             Greets recognized ministers by name FIRST, or uses general greeting if not recognized
             Only sends ONE greeting per session
+            Uses async lock to prevent race conditions
             """
             nonlocal greeted_people, greeting_flags
 
-            # Try face recognition if enabled and frame provided
-            recognized_person = None
-            if FACE_RECOGNITION_ENABLED and frame_bytes:
-                try:
-                    # Lazy load face recognizer on first use
-                    global face_recognizer
-                    if face_recognizer is None:
-                        from insightface_recognition import face_recognizer as fr
-                        face_recognizer = fr
+            # Use async lock to prevent race conditions with greeting
+            async with greeting_flags["greeting_lock"]:
+                # Try face recognition if enabled and frame provided
+                recognized_person = None
+                if FACE_RECOGNITION_ENABLED and frame_bytes:
+                    try:
+                        # Lazy load face recognizer on first use
+                        global face_recognizer
+                        if face_recognizer is None:
+                            from insightface_recognition import face_recognizer as fr
+                            face_recognizer = fr
 
-                    workflow_analyzer.start_step("Face Recognition")
-                    match = face_recognizer.recognize_person(frame_bytes)
-                    workflow_analyzer.complete_step(matched=match.matched if match else False)
-                    if match.matched:
-                        recognized_person = match.user_name
-                        print(f"👤 RECOGNIZED: {match.user_name} (confidence: {match.confidence:.0%})")
+                        workflow_analyzer.start_step("Face Recognition")
+                        match = face_recognizer.recognize_person(frame_bytes)
+                        workflow_analyzer.complete_step(matched=match.matched if match else False)
+                        if match.matched:
+                            recognized_person = match.user_name
+                            print(f"👤 RECOGNIZED: {match.user_name} (confidence: {match.confidence:.0%})")
 
-                        # ✅ SINGLE GREETING PER SESSION - Only greet once at the beginning
-                        if not greeting_flags["initial_greeting_sent"]:
-                            greeting_flags["initial_greeting_sent"] = True
-                            greeted_people.add(match.phone)
-
-                            # Build simple, natural Arabic greeting based on recognition
-                            # Format: السلام عليكم [with title if VIP, just name if regular]
-                            user_type = "guest"
-                            user_context = ""
-
-                            # Check for specific VIPs - use formal titles
-                            if "Abd Salam Haykal" in match.user_name or "عبد السلام هيكل" in match.user_name:
-                                user_type = "minister"
-                                greeting = "السلام عليكم سيدي الوزير عبد السلام هيكل، أهلاً وسهلاً بك في شركة أورنينا"
-                                user_context = "Government Minister: Abd Salam Haykal"
-                            elif "Asaad Chaibani" in match.user_name or "أسعد شيباني" in match.user_name:
-                                user_type = "minister"
-                                greeting = "السلام عليكم سيدي الوزير أسعد شيباني، أهلاً وسهلاً بك في شركة أورنينا"
-                                user_context = "Government Minister: Asaad Chaibani"
-                            elif "Mohamed Bardouni" in match.user_name or "محمد البردوني" in match.user_name:
-                                user_type = "developer"
-                                greeting = "السلام عليكم سيدي محمد، أهلاً وسهلاً بك في شركة أورنينا"
-                                user_context = "Developer: Mohamed Bardouni"
-                            elif "Radwan Nassar" in match.user_name or "رضوان نصار" in match.user_name:
-                                user_type = "ceo"
-                                greeting = "السلام عليكم السيد رضوان نصار، أهلاً وسهلاً بك في شركة أورنينا"
-                                user_context = "CEO of Ornina Media: Radwan Nassar"
-                            elif "طارق مارديني" in match.user_name or "Tarik Mardini" in match.user_name:
-                                user_type = "operations_director"
-                                greeting = "السلام عليكم السيد طارق مارديني، أهلاً وسهلاً بك في شركة أورنينا"
-                                user_context = "Operations Director & Board Member: Tarik Mardini"
-                            else:
-                                # Regular recognized person - simple greeting with name
-                                user_type = "recognized_guest"
-                                greeting = f"السلام عليكم السيد {match.user_name}، أهلاً وسهلاً بك"
-                                user_context = f"Recognized Guest: {match.user_name}"
-
-                            print(f"🎤 First Greeting ({user_type}): {greeting}")
-                            print(f"   👥 {user_context}")
-                            print(f"   ✅ Session: {greeting_flags['session_identity']} - NO MORE GREETINGS THIS SESSION")
-
-                            workflow_analyzer.start_step("Deliver First Greeting")
-                            await session.say(greeting, allow_interruptions=True)
-                            workflow_analyzer.complete_step(person=match.user_name, user_type=user_type)
-
-                            # Print performance report after first greeting
-                            workflow_analyzer.print_report()
-
-                        # Add recognition to context
-                        recognition_text = f"\n\n👤 Person: {match.user_name}"
-                        analysis = recognition_text
-                    else:
-                        # Not recognized yet - wait a few seconds before sending general greeting
-                        # This gives face recognition multiple attempts to match
-                        if not greeting_flags["initial_greeting_sent"]:
-                            # Record first visual update time
-                            if greeting_flags["first_visual_time"] is None:
-                                greeting_flags["first_visual_time"] = time.time()
-                                print(f"⏳ First visual update received. Waiting for face recognition...")
-
-                            # Wait at least 3 seconds before sending general greeting
-                            elapsed = time.time() - greeting_flags["first_visual_time"]
-                            if elapsed > 3:
-                                # Still not recognized after 3 seconds, send general greeting
+                            # ✅ SINGLE GREETING PER SESSION - Only greet once at the beginning
+                            if not greeting_flags["initial_greeting_sent"]:
                                 greeting_flags["initial_greeting_sent"] = True
-                                general_greeting = "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟"
-                                print(f"🎤 Sending general greeting (person not recognized after {elapsed:.1f}s)")
+                                greeted_people.add(match.phone)
+
+                                # Build simple, natural Arabic greeting based on recognition
+                                # Format: السلام عليكم [with title if VIP, just name if regular]
+                                user_type = "guest"
+                                user_context = ""
+
+                                # Check for specific VIPs - use formal titles
+                                if "Abd Salam Haykal" in match.user_name or "عبد السلام هيكل" in match.user_name:
+                                    user_type = "minister"
+                                    greeting = "السلام عليكم معالي الوزير عبد السلام هيكل، أهلاً وسهلاً بك في شركة أورنينا"
+                                    user_context = "Government Minister: Abd Salam Haykal"
+                                elif "Asaad Chaibani" in match.user_name or "أسعد شيباني" in match.user_name:
+                                    user_type = "minister"
+                                    greeting = "السلام عليكم معالي الوزير أسعد شيباني، أهلاً وسهلاً بك في شركة أورنينا"
+                                    user_context = "Government Minister: Asaad Chaibani"
+                                elif "Mohamed Bardouni" in match.user_name or "محمد البردوني" in match.user_name:
+                                    user_type = "developer"
+                                    greeting = "السلام عليكم سيد محمد، أهلاً وسهلاً بك في شركة أورنينا"
+                                    user_context = "Developer: Mohamed Bardouni"
+                                elif "Radwan Nassar" in match.user_name or "رضوان نصار" in match.user_name:
+                                    user_type = "ceo"
+                                    greeting = "السلام عليكم السيد رضوان نصار، أهلاً وسهلاً بك في شركة أورنينا"
+                                    user_context = "CEO of Ornina Media: Radwan Nassar"
+                                elif "طارق مارديني" in match.user_name or "Tarik Mardini" in match.user_name:
+                                    user_type = "operations_director"
+                                    greeting = "السلام عليكم السيد طارق مارديني، أهلاً وسهلاً بك في شركة أورنينا"
+                                    user_context = "Operations Director & Board Member: Tarik Mardini"
+                                else:
+                                    # Regular recognized person - simple greeting with name
+                                    user_type = "recognized_guest"
+                                    greeting = f"السلام عليكم السيد {match.user_name}، أهلاً وسهلاً بك"
+                                    user_context = f"Recognized Guest: {match.user_name}"
+
+                                print(f"🎤 First Greeting ({user_type}): {greeting}")
+                                print(f"   👥 {user_context}")
+                                print(f"   ✅ Session: {greeting_flags['session_identity']} - NO MORE GREETINGS THIS SESSION")
+
                                 workflow_analyzer.start_step("Deliver First Greeting")
-                                await session.say(general_greeting, allow_interruptions=True)
-                                workflow_analyzer.complete_step(person="Unknown")
+                                await session.say(greeting, allow_interruptions=True)
+                                workflow_analyzer.complete_step(person=match.user_name, user_type=user_type)
 
                                 # Print performance report after first greeting
                                 workflow_analyzer.print_report()
+
+                            # Add recognition to context (preserve recognition data)
+                            recognition_text = f"\n\n👤 Person: {match.user_name}"
+                            # Don't overwrite analysis - append instead
+                            if analysis:
+                                analysis = f"{analysis}{recognition_text}"
                             else:
-                                print(f"   ⏳ Still waiting for recognition... {3-elapsed:.1f}s remaining")
+                                analysis = recognition_text
+                        else:
+                            # Not recognized yet - keep waiting and trying
+                            # Priority: Recognition FIRST, then greeting
+                            if not greeting_flags["initial_greeting_sent"]:
+                                # Record first visual update time
+                                if greeting_flags["first_visual_time"] is None:
+                                    greeting_flags["first_visual_time"] = time.time()
+                                    print(f"⏳ First visual update received. Face recognition in progress...")
 
-                except Exception as e:
-                    print(f"⚠️  Face recognition error: {e}")
-                    # If error and no greeting sent yet, send general greeting ONLY ONCE
-                    if not greeting_flags["initial_greeting_sent"]:
-                        greeting_flags["initial_greeting_sent"] = True
-                        general_greeting = "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟"
-                        print(f"🎤 Sending general greeting (recognition error)")
-                        await session.say(general_greeting, allow_interruptions=True)
+                                # Wait 10 seconds to give face recognition multiple attempts
+                                # This ensures we try to recognize before sending generic greeting
+                                # With 0.8s intervals, this gives ~12 attempts
+                                elapsed = time.time() - greeting_flags["first_visual_time"]
+                                if elapsed > 10:
+                                    # After 5 seconds of trying, send general greeting
+                                    greeting_flags["initial_greeting_sent"] = True
+                                    general_greeting = "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟"
+                                    print(f"🎤 Sending general greeting (person not recognized after {elapsed:.1f}s - tried multiple times)")
+                                    workflow_analyzer.start_step("Deliver First Greeting")
+                                    await session.say(general_greeting, allow_interruptions=True)
+                                    workflow_analyzer.complete_step(person="Unknown")
 
-            # Update visual context in Pydantic store
-            if recognized_person:
-                agent.update_visual_context(f"Current person: {recognized_person}")
-                print(f"✅ Visual context updated: {recognized_person}")
-            else:
-                # No one recognized
-                print(f"👤 No person recognized")
+                                    # Print performance report after first greeting
+                                    workflow_analyzer.print_report()
+                                else:
+                                    print(f"   ⏳ Face recognition in progress... {10-elapsed:.1f}s remaining (attempt #{int(elapsed/0.8)+1})")
+
+                    except Exception as e:
+                        print(f"⚠️  Face recognition error: {e}")
+                        # If error and no greeting sent yet, send general greeting ONLY ONCE
+                        if not greeting_flags["initial_greeting_sent"]:
+                            greeting_flags["initial_greeting_sent"] = True
+                            general_greeting = "السلام عليكم! أهلاً بك في شركة أورنينا للذكاء الاصطناعي. كيف بقدر ساعدك اليوم؟"
+                            print(f"🎤 Sending general greeting (recognition error)")
+                            await session.say(general_greeting, allow_interruptions=True)
+
+                # Update visual context in Pydantic store (outside the lock)
+                if recognized_person:
+                    agent.update_visual_context(f"Current person: {recognized_person}")
+                    print(f"✅ Visual context updated: {recognized_person}")
+                else:
+                    # No one recognized
+                    print(f"👤 No person recognized")
 
         # Monitor for video tracks
         async def monitor_video_tracks():
@@ -677,7 +678,30 @@ async def entrypoint(ctx: agents.JobContext):
                                     import traceback
                                     traceback.print_exc()
 
-        # Start video monitoring in background
+        # NOW start the session with all handlers ready
+        workflow_analyzer.complete_step()
+        workflow_analyzer.start_step("Starting Avatar Session")
+
+        await session.start(
+            room=ctx.room,
+            agent=agent,
+            room_input_options=RoomInputOptions(
+                noise_cancellation=noise_cancellation.BVC(),
+            ),
+        )
+
+        workflow_analyzer.complete_step()
+
+        print("\n" + "="*60)
+        print("الوكيل الذكر جاهز! - MALE AGENT READY!")
+        print("="*60)
+        print("الاستماع للغة العربية - Listening for Arabic...")
+        print("يتحدث: OpenAI Onyx (صوت ذكر عميق) - Speaking: OpenAI Onyx (Deep Male Voice)")
+        print("التعرف على الوجوه نشط - Face Recognition Active")
+        print("قل: السلام عليكم - Say: Assalamu Alaikum")
+        print("="*60 + "\n")
+
+        # Start video monitoring in background (will detect faces BEFORE greeting)
         asyncio.create_task(monitor_video_tracks())
 
     except Exception as e:

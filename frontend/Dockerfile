@@ -19,6 +19,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set environment variables for build
+ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # Accept build args and convert to env vars for Next.js build

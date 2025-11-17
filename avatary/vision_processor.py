@@ -21,7 +21,7 @@ class VisionProcessor:
         self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.last_analysis = None
         self.last_frame_time = 0
-        self.analysis_interval = 3  # Analyze every 3 seconds
+        self.analysis_interval = 0.8  # Analyze every 0.8 seconds (much faster for face recognition)
         self.is_running = False
 
     async def capture_frame_from_track(self, video_track: rtc.RemoteVideoTrack) -> Optional[bytes]:
@@ -75,31 +75,15 @@ class VisionProcessor:
             # Encode image to base64
             base64_image = base64.b64encode(image_bytes).decode('utf-8')
 
-            # Prepare prompt - Professional exhibition-focused vision prompt
-            prompt = """أنت مساعد ذكي في معرض تقنيات الذكاء الاصطناعي. قم بتحليل المشهد بطريقة احترافية.
-
-You are an intelligent assistant at an AI technology exhibition. Analyze the scene professionally.
-
-Your task:
-1. Identify the main subject/activity in the image
-2. Note any interactive elements or demonstrations
-3. Assess the setting context (presentation, discussion, exhibition floor)
-4. Provide brief, professional observations suitable for an AI showcase
-
-Do NOT:
-- Describe people's personal features or clothing in detail
-- Make assumptions about individuals
-- Include irrelevant background details
-
-Keep response concise and professional (2-3 sentences max).
-Respond in Arabic first, then English."""
+            # Ultra-simplified prompt for faster processing - Just detect person
+            prompt = """Describe the main person in center of frame in 1 sentence. Arabic only."""
 
             if context:
                 prompt += f"\n\nAdditional context: {context}"
 
             # Call GPT-4 Vision API
             response = await self.client.chat.completions.create(
-                model="gpt-4o",  # GPT-4 with vision
+                model="gpt-4o-mini",  # Faster, cheaper mini model - still accurate for vision
                 messages=[
                     {
                         "role": "user",
@@ -115,7 +99,7 @@ Respond in Arabic first, then English."""
                         ]
                     }
                 ],
-                max_tokens=300
+                max_tokens=50  # Very short response - just need basic description for context
             )
 
             analysis = response.choices[0].message.content

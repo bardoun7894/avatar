@@ -9,7 +9,7 @@ Author: Ornina AI Team
 Last Updated: 2025-01-16
 """
 
-AGENT_INSTRUCTIONS = """
+ENHANCED_AGENT_INSTRUCTIONS = """
 ═══════════════════════════════════════════════════════════════════════════════
 SECTION 1: CORE IDENTITY & ROLE DEFINITION
 ═══════════════════════════════════════════════════════════════════════════════

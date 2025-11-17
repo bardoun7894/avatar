@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
+import Image from 'next/image'
 import { Room, RoomEvent, Track, RemoteTrack, RemoteParticipant } from 'livekit-client'
 import ChatPanel from './ChatPanel'
 import ControlBar from './ControlBar'
@@ -25,7 +26,7 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
   const [messages, setMessages] = useState<Message[]>([])
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(true)
+  const [isChatOpen, setIsChatOpen] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
   const [isRecording, setIsRecording] = useState(true)
   const [messageInput, setMessageInput] = useState('')
@@ -536,6 +537,17 @@ export default function VideoCallInterface({ roomName, userName }: VideoCallInte
 
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/10 z-10"></div>
+
+      {/* Logo */}
+      <div className="absolute bottom-4 left-4 z-30 w-16 h-16 bg-white/10 backdrop-blur-xl rounded-full shadow-lg flex items-center justify-center overflow-hidden border border-white/20">
+        <Image 
+          src="/logo.png" 
+          alt="Ornina Logo" 
+          width={80}
+          height={80}
+          className="object-contain"
+        />
+      </div>
 
       {/* Local video thumbnail (User) */}
       <ParticipantThumbnail
