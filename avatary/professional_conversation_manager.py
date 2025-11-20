@@ -48,6 +48,18 @@ class ProfessionalConversationManager:
                 **(metadata or {})
             }
 
+            # Check if conversation already exists
+            existing = self.supabase.table('conversations')\
+                .select("*")\
+                .eq("conversation_id", conversation_id)\
+                .execute()
+
+            if existing.data and len(existing.data) > 0:
+                print(f"♻️  Conversation already exists: {conversation_id}")
+                print(f"   Room: {room_name}")
+                print(f"   Status: {existing.data[0].get('status', 'unknown')}")
+                return existing.data[0]
+
             # Create conversation record in database
             conversation = {
                 "conversation_id": conversation_id,

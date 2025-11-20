@@ -30,16 +30,14 @@ export default async function handler(
     const httpUrl = livekitUrl.replace('wss://', 'https://').replace('ws://', 'http://')
     console.log('🔗 Using LiveKit HTTP URL:', httpUrl)
 
-    // Note: The agent worker auto-joins rooms, so this endpoint is optional.
-    // We'll try to dispatch, but if it fails due to network issues, that's okay.
-    
+    // Note: LiveKit Cloud doesn't support /api/agent/jobs endpoint
+    // The agent worker auto-joins rooms based on room creation
     console.log('ℹ️  Agent will auto-join room based on room creation')
-    console.log('ℹ️  Optional: Attempting to dispatch via LiveKit API...')
 
-    // Create RoomService client with shorter timeout
+    // Create RoomService client
     const roomService = new RoomServiceClient(httpUrl, apiKey, apiSecret)
 
-    // Try to update room metadata (non-critical - agent auto-joins anyway)
+    // Update room metadata (helps agent identify capabilities needed)
     try {
       const metadataPromise = roomService.updateRoomMetadata(roomName, JSON.stringify({
         agent_requested: true,
@@ -48,54 +46,24 @@ export default async function handler(
         language: 'ar'
       }))
 
-      // Set a 5-second timeout
+      // Set a 3-second timeout for metadata update
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Metadata update timeout')), 5000)
+        setTimeout(() => reject(new Error('Metadata update timeout')), 3000)
       )
 
       await Promise.race([metadataPromise, timeoutPromise])
       console.log('✅ Agent metadata updated')
 
     } catch (metadataError: any) {
-      console.warn('⚠️  Metadata update failed (agent will still auto-join):', metadataError.message)
+      // This is non-critical - agent will still auto-join based on room creation
+      console.log('ℹ️  Metadata update skipped (agent will still auto-join)')
     }
 
-    // Try to dispatch job (non-critical - agent auto-joins anyway)
-    try {
-      const jobPromise = fetch(`${httpUrl}/api/agent/jobs`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          room: roomName,
-          participant: 'agent',
-        })
-      })
-
-      // Set a 5-second timeout
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Job dispatch timeout')), 5000)
-      )
-
-      const response: any = await Promise.race([jobPromise, timeoutPromise])
-
-      if (response.ok) {
-        const jobData = await response.json()
-        console.log('✅ Agent job created:', jobData)
-      } else {
-        console.warn('⚠️  Job dispatch failed (agent will still auto-join)')
-      }
-    } catch (jobError: any) {
-      console.warn('⚠️  Job dispatch failed (agent will still auto-join):', jobError.message)
-    }
-
-    // Always return success - the agent will auto-join
+    // Always return success - the agent auto-joins when room is created
     return res.status(200).json({
       success: true,
       message: 'Agent will join room automatically',
-      note: 'The LiveKit agent worker monitors for new rooms and auto-joins'
+      note: 'LiveKit agent worker monitors for new rooms and auto-joins'
     })
 
   } catch (error: any) {

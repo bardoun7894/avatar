@@ -119,12 +119,7 @@ async def entrypoint(ctx: agents.JobContext):
     avatar_provider = os.environ.get("AVATAR_PROVIDER", "audio").lower()
     print(f"Avatar Mode: {avatar_provider.upper()}")
 
-    # Voice configuration
-    elevenlabs_api_key = os.environ.get("ELEVENLABS_API_KEY")
-    elevenlabs_voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "G1QUjBCuRBbLbAmYlTgl")
-
     print(f"اللغة: العربية - Language: Arabic")
-    print(f"الصوت: OpenAI Onyx (صوت ذكر عميق) - Voice: OpenAI Onyx (Deep Male Voice - supports Arabic)")
 
     # Get local tools
     local_tools = get_local_tools()
@@ -202,33 +197,52 @@ async def entrypoint(ctx: agents.JobContext):
     # Use OpenAI LLM
     session_config["llm"] = openai.LLM(model="gpt-4o-mini")
 
-    # Use OpenAI TTS with male voice (reliable and supports Arabic)
-    print("\nاستخدام OpenAI TTS للصوت...")
-    session_config["tts"] = openai.TTS(
-        voice="onyx",  # Deep male voice - consistent and supports Arabic
-        speed=1.0
-    )
-    print("✅ تم تكوين OpenAI TTS - OpenAI TTS configured (voice: onyx - male)!")
+    # Configure TTS - Try ElevenLabs first, fallback to OpenAI
+    print("\nتكوين صوت ElevenLabs العربي - Configuring ElevenLabs Arabic voice...")
 
-    # Commented out ElevenLabs (having connection issues)
-    # if ELEVENLABS_AVAILABLE and elevenlabs_api_key:
-    #     try:
-    #         print("\nتكوين صوت أبو سالم...")
-    #         tts = elevenlabs.TTS(
-    #             model="eleven_turbo_v2_5",
-    #             voice_id=elevenlabs_voice_id,
-    #             api_key=elevenlabs_api_key,
-    #             language="ar",
-    #         )
-    #         session_config["tts"] = tts
-    #         print("تم تكوين الصوت الذكري بنجاح - Male voice configured!")
-    #     except Exception as e:
-    #         print(f"فشل ElevenLabs: {e}")
-    #         print("استخدام صوت OpenAI البديل...")
-    #         session_config["tts"] = openai.TTS(voice="alloy")
-    # else:
-    #     print("ElevenLabs not available, using OpenAI voice (alloy)")
-    #     session_config["tts"] = openai.TTS(voice="alloy")
+    if ELEVENLABS_AVAILABLE:
+        try:
+            # Get API key from environment (plugin checks ELEVEN_API_KEY)
+            elevenlabs_api_key = os.environ.get("ELEVEN_API_KEY")
+            elevenlabs_voice_id = os.environ.get("ELEVENLABS_VOICE_AHMED", "drMurExmkWVIH5nW8snR")
+
+            if elevenlabs_api_key:
+                # Define voice settings for quality Arabic speech
+                # These settings are CRITICAL for natural-sounding Arabic
+                voice_settings = elevenlabs.VoiceSettings(
+                    stability=0.5,              # 0.0-1.0: Balance between stability and expressiveness
+                    similarity_boost=0.75,      # 0.0-1.0: How closely to match the voice
+                    use_speaker_boost=True      # Enhance clarity and volume
+                )
+
+                # Create ElevenLabs TTS with all required parameters
+                tts = elevenlabs.TTS(
+                    model="eleven_multilingual_v2",    # Required for high-quality Arabic
+                    voice_id=elevenlabs_voice_id,
+                    voice_settings=voice_settings,
+                    language="ar",                      # Arabic language code
+                    enable_logging=True,                # Enable request logging
+                    sync_alignment=True,                # Enable word-level timestamps
+                )
+                session_config["tts"] = tts
+
+                print("✅ ElevenLabs TTS configured successfully!")
+                print(f"   Model: eleven_multilingual_v2")
+                print(f"   Voice: Ahmed (ID: {elevenlabs_voice_id})")
+                print(f"   Language: Arabic (ar)")
+                print(f"   Settings: stability=0.5, similarity_boost=0.75")
+            else:
+                raise ValueError("ELEVEN_API_KEY not found in environment")
+
+        except Exception as e:
+            print(f"⚠️  ElevenLabs failed: {e}")
+            print("   Falling back to OpenAI TTS...")
+            session_config["tts"] = openai.TTS(voice="onyx", speed=1.0)
+            print("✅ OpenAI TTS configured (fallback: onyx)")
+    else:
+        print("⚠️  ElevenLabs plugin not available, using OpenAI TTS...")
+        session_config["tts"] = openai.TTS(voice="onyx", speed=1.0)
+        print("✅ OpenAI TTS configured (voice: onyx)")
 
     # Arabic STT with VAD
     session_config["stt"] = openai.STT(language="ar")
@@ -696,7 +710,7 @@ async def entrypoint(ctx: agents.JobContext):
         print("الوكيل الذكر جاهز! - MALE AGENT READY!")
         print("="*60)
         print("الاستماع للغة العربية - Listening for Arabic...")
-        print("يتحدث: OpenAI Onyx (صوت ذكر عميق) - Speaking: OpenAI Onyx (Deep Male Voice)")
+        print("يتحدث: أحمد (ElevenLabs) - Speaking: Ahmed (ElevenLabs)")
         print("التعرف على الوجوه نشط - Face Recognition Active")
         print("قل: السلام عليكم - Say: Assalamu Alaikum")
         print("="*60 + "\n")
